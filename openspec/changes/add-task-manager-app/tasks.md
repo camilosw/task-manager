@@ -1,9 +1,9 @@
 ## 1. Project setup
 
-- [ ] 1.1 Scaffold a Vite React + TypeScript project at the repository root, leaving `openspec/` and `.claude/` untouched
-- [ ] 1.2 Add Vitest with the jsdom environment, React Testing Library, and `fake-indexeddb`; add a `test` script, then prove the harness can go red with a deliberately failing placeholder test before deleting it
-- [ ] 1.3 Create the layer directories `src/domain/`, `src/persistence/`, and `src/ui/`
-- [ ] 1.4 Add an import-boundary lint rule that fails the build if anything under `src/domain/` imports React or a storage API, and verify it fails on a deliberate violation before reverting
+- [x] 1.1 Scaffold a Vite React + TypeScript project at the repository root, leaving `openspec/` and `.claude/` untouched
+- [x] 1.2 Add Vitest with the jsdom environment, React Testing Library, and `fake-indexeddb`; add a `test` script, then prove the harness can go red with a deliberately failing placeholder test before deleting it
+- [x] 1.3 Create the layer directories `src/domain/`, `src/persistence/`, and `src/ui/`
+- [x] 1.4 Add an import-boundary lint rule that fails the build if anything under `src/domain/` imports React or a storage API, and verify it fails on a deliberate violation before reverting
 
 ## 2. Domain — task model
 
