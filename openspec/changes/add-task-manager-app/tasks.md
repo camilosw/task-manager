@@ -16,11 +16,11 @@
 
 ## 3. Domain — daily plan selection
 
-- [ ] 3.1 Write a failing test for the selection ordering — priority first, oldest first within a level, never reordered by duration — then implement the comparator
-- [ ] 3.2 Write a failing test for the overshoot example from the spec (urgent 15m, high 30m, medium 20m, low 10m → first three, total 65), then implement the selection function
-- [ ] 3.3 Add the exact-boundary example as a test (high 30m, medium 30m, low 5m → first two only); if it passes without a code change, confirm it can fail before moving on
-- [ ] 3.4 Add the urgent-only example as a test (urgent 45m, urgent 30m, high 5m → both urgent tasks, total 75); if it passes without a code change, confirm it can fail before moving on
-- [ ] 3.5 Write a failing test that completed tasks are never selected and that an empty task list yields an empty plan
+- [x] 3.1 Write a failing test for the selection ordering — priority first, oldest first within a level, never reordered by duration — then implement the comparator
+- [x] 3.2 Write a failing test for the overshoot example from the spec (urgent 15m, high 30m, medium 20m, low 10m → first three, total 65), then implement the selection function
+- [x] 3.3 Add the exact-boundary example as a test (high 30m, medium 30m, low 5m → first two only); if it passes without a code change, confirm it can fail before moving on
+- [x] 3.4 Add the urgent-only example as a test (urgent 45m, urgent 30m, high 5m → both urgent tasks, total 75); if it passes without a code change, confirm it can fail before moving on
+- [x] 3.5 Write a failing test that completed tasks are never selected and that an empty task list yields an empty plan
 
 ## 4. Domain — day boundary
 
