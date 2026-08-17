@@ -7,12 +7,12 @@
 
 ## 2. Domain — task model
 
-- [ ] 2.1 Write a failing test pinning the five priority levels and their order — urgent, high, medium, low, very low — then implement the priority type and its comparator
-- [ ] 2.2 Write a failing test pinning the nine allowed durations and rejecting any value outside them, then implement the duration type and its guard
-- [ ] 2.3 Write a failing test for duration display formatting (5 → "5m", 60 → "1h", 90 → "1.5h", 120 → "2h"), then implement the formatter
-- [ ] 2.4 Write a failing test that creating a task requires a non-empty trimmed name, a duration and a priority, then implement task creation, recording the creation timestamp from the injected `now`
-- [ ] 2.5 Write a failing test that editing preserves the creation timestamp and rejects a cleared name, then implement editing
-- [ ] 2.6 Write a failing test that completing a task records the completion time from the injected `now`, then implement completion
+- [x] 2.1 Write a failing test pinning the five priority levels and their order — urgent, high, medium, low, very low — then implement the priority type and its comparator
+- [x] 2.2 Write a failing test pinning the nine allowed durations and rejecting any value outside them, then implement the duration type and its guard
+- [x] 2.3 Write a failing test for duration display formatting (5 → "5m", 60 → "1h", 90 → "1.5h", 120 → "2h"), then implement the formatter
+- [x] 2.4 Write a failing test that creating a task requires a non-empty trimmed name, a duration and a priority, then implement task creation, recording the creation timestamp from the injected `now`
+- [x] 2.5 Write a failing test that editing preserves the creation timestamp and rejects a cleared name, then implement editing
+- [x] 2.6 Write a failing test that completing a task records the completion time from the injected `now`, then implement completion
 
 ## 3. Domain — daily plan selection
 
