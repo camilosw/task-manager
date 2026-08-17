@@ -24,8 +24,8 @@
 
 ## 4. Domain — day boundary
 
-- [ ] 4.1 Write a failing test that the local calendar date is derived from an injected `now` as `YYYY-MM-DD`, then implement the conversion
-- [ ] 4.2 Write a failing test covering all three comparisons — stored date earlier recomputes, equal does not, later does not — then implement the check using strict less-than
+- [x] 4.1 Write a failing test that the local calendar date is derived from an injected `now` as `YYYY-MM-DD`, then implement the conversion
+- [x] 4.2 Write a failing test covering all three comparisons — stored date earlier recomputes, equal does not, later does not — then implement the check using strict less-than
 
 ## 5. Domain — snapshot membership
 
