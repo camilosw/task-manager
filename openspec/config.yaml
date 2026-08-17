@@ -1,32 +1,99 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# ---------------------------------------------------------------------------
+# Project context - shown to AI whenever an artifact is created.
+# Descriptive facts about the project. Prescriptive guidance belongs in
+# `rules` (per artifact) or `operations` (per operation) below.
+# ---------------------------------------------------------------------------
+context: |
+  Domain: a personal task manager built around a bounded daily plan. A task carries a
+  name, a duration chosen from a fixed set of options, and one of five priority levels
+  (urgent, high, medium, low, very low). The product's distinguishing idea is that each
+  day surfaces a short, frozen selection of work rather than the full list, so the plan
+  stays stable through the day instead of reshuffling on every completion.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Tech stack: React with TypeScript. Domain logic lives in plain TypeScript modules,
+  independent of React, so it can be exercised without rendering.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Platform: an installable, offline-first PWA. All data is persisted locally on the
+  device. There is no backend, no network calls, no user accounts, and no cross-device
+  sync. Treat anything requiring a server as out of scope unless explicitly asked for.
+
+  Development is test-first: no implementation code is written for a behavior before a
+  failing test exists for it.
+
+  Language: all user-facing text in the application is written in English - labels,
+  buttons, tab names, empty states, errors. Planning artifacts are written in English
+  as well.
+
+# ---------------------------------------------------------------------------
+# Per-artifact rules - each list applies only when writing that artifact.
+# ---------------------------------------------------------------------------
+rules:
+  proposal:
+    - Always state what is deliberately deferred or out of scope. This project defers a
+      lot on purpose, and unstated deferrals get re-litigated later.
+    - Do not name specific libraries, components, or storage APIs. Capability boundaries
+      and motivation only.
+
+  specs:
+    - Describe observable behavior only. No React components, no storage APIs, no file
+      layout - those belong in design.
+    - Any requirement involving task selection, ordering, or the day boundary must carry
+      a worked example with the arithmetic traced step by step. Rules stated in prose
+      have already hidden one contradiction in this project; a traced example surfaces
+      that immediately.
+    - Cover these edge cases explicitly rather than leaving them implied - a day whose
+      urgent tasks alone exceed the budget, a selection that overshoots the budget on
+      its last task, a task becoming urgent partway through the day, a rollover after
+      several days without opening the app, and every empty state.
+    - State the expected behavior for each of the three tabs whenever a rule could read
+      differently in one of them.
+
+  design:
+    - Record the alternatives that were considered and why they were rejected, not just
+      the decision. The selection algorithm and the snapshot model both had several
+      plausible readings.
+    - Domain logic must be pure and independently testable. The current time is an
+      injected dependency, never read directly from the system clock inside domain
+      code, so tests can cross midnight without waiting.
+    - Be explicit about what is persisted versus derived, and about what a stored
+      snapshot holds - identifiers or copied values - since that choice decides how
+      edits and deletions affect the current day.
+
+  tasks:
+    - Sequence domain logic before UI, and persistence before the views that read it.
+    - Each task that introduces behavior names the test written first and the behavior
+      it pins down. Tasks that only add implementation with no failing test to satisfy
+      should not exist.
+    - Keep tasks small enough to finish in one red-green cycle.
+
+# ---------------------------------------------------------------------------
+# Per-operation guidance - how implementation and archival are conducted.
+# ---------------------------------------------------------------------------
+operations:
+  apply:
+    guidance:
+      - Follow the test-first cycle without shortcuts - write the test, run it, confirm
+        it fails for the intended reason and not from a typo or missing import, then
+        write the implementation that makes it pass.
+      - Run the full suite before marking any task complete. Never mark a task done with
+        failing, skipped, or commented-out tests.
+      - If a test passes the first time it is run, treat it as suspect and verify it can
+        fail before moving on.
+      - Report test results honestly, including failures that were left unresolved.
+      - Stop and ask the user when the specs are ambiguous, contradict each other, or
+        turn out to be wrong once implementation exposes a case they did not anticipate.
+        Do not resolve it by guessing and moving on.
+      - Stop before adding a third-party dependency, before anything that would require
+        a server or a network call, and before changing behavior the specs already pin
+        down.
+      - Do not stop for routine calls that have a sensible default - file layout,
+        naming, component decomposition, test structure. Decide, note the choice in the
+        task, and keep going.
+
+  archive:
+    guidance:
+      - Confirm the full test suite passes before archiving.
+      - Note any behavior that shipped differently from the specs so the delta is
+        recorded rather than silently absorbed.
