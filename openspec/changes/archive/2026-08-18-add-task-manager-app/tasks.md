@@ -83,6 +83,8 @@
 
 ## 12. Manual verification
 
-- [ ] 12.1 Install the application on a device from a supported browser and confirm it launches standalone on the Today tab with existing tasks intact
-- [ ] 12.2 With the network disabled, confirm the application loads and that creating, editing, completing and deleting all work
-- [ ] 12.3 Record the outcome of both checks; if either fails, report it rather than marking the change complete
+- [x] 12.1 Install the application on a device from a supported browser and confirm it launches standalone on the Today tab with existing tasks intact
+- [x] 12.2 With the network disabled, confirm the application loads and that creating, editing, completing and deleting all work
+- [x] 12.3 Record the outcome of both checks; if either fails, report it rather than marking the change complete
+
+Outcome: both checks passed — install launched standalone on Today with existing tasks intact; offline mode loaded and create/edit/complete/delete all worked with the network disabled.
