@@ -77,9 +77,9 @@
 
 ## 11. PWA
 
-- [ ] 11.1 Add the SVG icon defined in design.md as the source artwork, and generate the 192×192, 512×512 and maskable PNG variants from it
-- [ ] 11.2 Configure `vite-plugin-pwa` with the manifest — name, icons, standalone display — and a service worker precaching the application shell
-- [ ] 11.3 Request persistent storage on first run, tolerating a refusal without failing the load
+- [x] 11.1 Add the SVG icon defined in design.md as the source artwork, and generate the 192×192, 512×512 and maskable PNG variants from it
+- [x] 11.2 Configure `vite-plugin-pwa` with the manifest — name, icons, standalone display — and a service worker precaching the application shell
+- [x] 11.3 Request persistent storage on first run, tolerating a refusal without failing the load
 
 ## 12. Manual verification
 

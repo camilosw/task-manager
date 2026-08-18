@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { createInMemoryRepository } from '../persistence/inMemoryRepository'
@@ -376,5 +376,73 @@ describe('useAppState first-ever load', () => {
     assertLoaded(result.current)
     expect(result.current.snapshot).toEqual(existingSnapshot)
     expect(saveSnapshotSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('useAppState persistent storage request', () => {
+  // jsdom (the environment every other test in this file runs under) has no
+  // `navigator.storage` at all, which is itself the common case this
+  // feature must tolerate — see the assertions below that the app still
+  // reaches 'loaded' with no `navigator.storage` present. These tests
+  // additionally install one on `navigator` to cover the two outcomes
+  // jsdom can't otherwise exercise: the browser granting persistence, and
+  // the browser explicitly refusing it. The property is restored
+  // afterwards so it doesn't leak into other test files.
+  const originalStorage = Object.getOwnPropertyDescriptor(navigator, 'storage')
+
+  afterEach(() => {
+    if (originalStorage) {
+      Object.defineProperty(navigator, 'storage', originalStorage)
+    } else {
+      delete (navigator as { storage?: unknown }).storage
+    }
+  })
+
+  it('has no navigator.storage in the jsdom test environment, and still loads normally', async () => {
+    expect('storage' in navigator).toBe(false)
+
+    const repository = createInMemoryRepository()
+    const result = await renderLoaded(repository)
+
+    assertLoaded(result.current)
+  })
+
+  it('requests persistent storage on mount when the API is available', async () => {
+    const persist = vi.fn().mockResolvedValue(true)
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist },
+    })
+
+    const repository = createInMemoryRepository()
+    await renderLoaded(repository)
+
+    expect(persist).toHaveBeenCalledTimes(1)
+  })
+
+  it('still loads when the browser refuses persistent storage', async () => {
+    const persist = vi.fn().mockResolvedValue(false)
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist },
+    })
+
+    const repository = createInMemoryRepository()
+    const result = await renderLoaded(repository)
+
+    assertLoaded(result.current)
+  })
+
+  it('still loads, with no unhandled rejection, when persist() rejects', async () => {
+    const persist = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist },
+    })
+
+    const repository = createInMemoryRepository()
+    const result = await renderLoaded(repository)
+
+    assertLoaded(result.current)
   })
 })

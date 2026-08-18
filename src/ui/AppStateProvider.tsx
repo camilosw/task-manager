@@ -45,6 +45,27 @@ function reducer(_state: Data, action: Action): Data {
 
 const defaultNow = () => new Date()
 
+/**
+ * Best-effort request that the browser not evict this device's storage
+ * under pressure (see design.md, decision 5: "The app requests persistent
+ * storage (`navigator.storage.persist()`) on first run. It is advisory —
+ * the browser may refuse — so it reduces the chance of eviction without
+ * eliminating it.").
+ *
+ * Guarded by a feature check, since the API does not exist in every
+ * browser and is absent from the jsdom test environment, and any
+ * rejection is swallowed: a refusal (or the absence of the API) must
+ * never throw, block rendering, or surface an error to the user — it only
+ * ever changes whether the browser is *allowed* to evict data, never
+ * whether the app loads.
+ */
+function requestPersistentStorage(): void {
+  if (!('storage' in navigator && 'persist' in navigator.storage)) return
+  navigator.storage.persist().catch(() => {
+    // Refusal is an expected, silent outcome — see the comment above.
+  })
+}
+
 export type AppStateProviderProps = {
   /** The persistence port. Injected so tests can use the in-memory
    * repository instead of the real IndexedDB one (see design.md, decision
@@ -94,6 +115,13 @@ export function AppStateProvider({
   useEffect(() => {
     dataRef.current = data
   }, [data])
+
+  // Fire-and-forget, independent of the load effect below: a refusal or a
+  // missing API must never delay or block the app from loading (see
+  // `requestPersistentStorage` above).
+  useEffect(() => {
+    requestPersistentStorage()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
