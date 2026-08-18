@@ -72,6 +72,9 @@ export function TaskManagerApp() {
       {activeTab === 'today' && (
         <section aria-label="Today">
           <h2>Today</h2>
+          <button type="button" onClick={() => state.recalculateToday()}>
+            Recalculate today
+          </button>
           <TodayTab
             tasks={state.tasks}
             snapshot={state.snapshot}

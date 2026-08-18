@@ -68,12 +68,12 @@
 
 ## 10. Rollover and recalculation
 
-- [ ] 10.1 Integration test and implement: returning to the foreground with a stored plan dated earlier recomputes the plan, and an equal date does not
-- [ ] 10.2 Integration test and implement: reopening after several days away produces a single plan for today, with no plans for the intervening days
-- [ ] 10.3 Integration test and implement: the plan is not replaced while the application stays in the foreground
-- [ ] 10.4 Integration test and implement: "Recalculate today" rebuilds the plan from scratch, admitting newly created tasks and dropping completed ones
-- [ ] 10.5 Integration test and implement: an urgent task created mid-day appears in Today immediately, and remains struck through after being completed
-- [ ] 10.6 Integration test and implement: a completed task in Today survives a reload still struck through, and the frozen selection is restored unchanged
+- [x] 10.1 Integration test and implement: returning to the foreground with a stored plan dated earlier recomputes the plan, and an equal date does not
+- [x] 10.2 Integration test and implement: reopening after several days away produces a single plan for today, with no plans for the intervening days
+- [x] 10.3 Integration test and implement: the plan is not replaced while the application stays in the foreground
+- [x] 10.4 Integration test and implement: "Recalculate today" rebuilds the plan from scratch, admitting newly created tasks and dropping completed ones
+- [x] 10.5 Integration test and implement: an urgent task created mid-day appears in Today immediately, and remains struck through after being completed
+- [x] 10.6 Integration test and implement: a completed task in Today survives a reload still struck through, and the frozen selection is restored unchanged
 
 ## 11. PWA
 

@@ -32,6 +32,11 @@ export type CreateTaskFormInput = {
  * computes new state → persist → re-render"). `deleteTask` has no domain
  * counterpart (section 2 defines no `deleteTask` function), so it removes
  * the task directly and prunes its id from the snapshot via `pruneTaskId`.
+ *
+ * `recalculateToday` is the "Recalculate today" escape hatch (see
+ * specs/daily-plan/spec.md, "Manual recalculation"): it rebuilds the
+ * snapshot from scratch against the currently pending tasks, regardless of
+ * the stored date, via `recomputeSnapshot`.
  */
 export type AppState =
   | { status: 'loading' }
@@ -43,6 +48,7 @@ export type AppState =
       editTask: (id: string, input: EditTaskInput) => Promise<EditTaskResult>
       deleteTask: (id: string) => Promise<void>
       completeTask: (id: string) => Promise<void>
+      recalculateToday: () => Promise<void>
     }
 
 /**

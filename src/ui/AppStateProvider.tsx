@@ -1,4 +1,4 @@
-import { useEffect, useReducer, type ReactNode } from 'react'
+import { useEffect, useReducer, useRef, type ReactNode } from 'react'
 import {
   completeTask as completeTaskDomain,
   createTask as createTaskDomain,
@@ -8,6 +8,7 @@ import {
   type EditTaskResult,
   type Task,
 } from '../domain/task'
+import { needsRecompute } from '../domain/dayBoundary'
 import {
   admitIfUrgent,
   pruneTaskId,
@@ -61,11 +62,23 @@ export type AppStateProviderProps = {
  * decision 6): a single context, updated through a reducer, starting in a
  * loading state until `repository.loadAll()` resolves.
  *
- * If the repository resolves with no snapshot at all — a fresh install
- * that has never computed a plan — a plan is computed immediately from the
- * loaded tasks and `now()`, and persisted before the state is marked loaded
- * (see specs/daily-plan/spec.md, "Opening the application for the very
- * first time").
+ * On load, and again whenever the document returns to the foreground (see
+ * "Rollover is checked on mount and on becoming visible" — design.md,
+ * decision 7), the stored snapshot's date is checked against `now()` with
+ * `needsRecompute`. Two situations both lead to a fresh `recomputeSnapshot`
+ * call, persisted before the state settles:
+ *
+ * - No snapshot exists at all — a fresh install that has never computed a
+ *   plan (see specs/daily-plan/spec.md, "Opening the application for the
+ *   very first time").
+ * - A snapshot exists but is dated earlier than `now()`'s local calendar
+ *   date (see specs/daily-plan/spec.md, "The plan is recomputed when the
+ *   day changes").
+ *
+ * An equal (or later — see `needsRecompute`) stored date leaves the
+ * snapshot untouched, so the frozen plan is never replaced merely because
+ * the application re-checked (see specs/daily-plan/spec.md, "The plan does
+ * not change while the app stays in the foreground").
  */
 export function AppStateProvider({
   repository,
@@ -74,18 +87,33 @@ export function AppStateProvider({
 }: AppStateProviderProps) {
   const [data, dispatch] = useReducer(reducer, { status: 'loading' } as Data)
 
+  // Tracks the latest `data` for the visibilitychange handler below, whose
+  // effect only re-runs when `repository`/`now` change — not on every state
+  // update — so a plain closure over `data` would go stale.
+  const dataRef = useRef(data)
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
+
   useEffect(() => {
     let cancelled = false
+
+    async function recomputeAndSet(tasks: Task[]) {
+      const snapshot = recomputeSnapshot(tasks, now())
+      await repository.saveSnapshot(snapshot)
+      if (cancelled) return
+      dispatch({ type: 'set', tasks, snapshot })
+    }
 
     async function load() {
       const loaded = await repository.loadAll()
       if (cancelled) return
 
-      if (loaded.snapshot === null) {
-        const snapshot = recomputeSnapshot(loaded.tasks, now())
-        await repository.saveSnapshot(snapshot)
-        if (cancelled) return
-        dispatch({ type: 'set', tasks: loaded.tasks, snapshot })
+      const shouldRecompute =
+        loaded.snapshot === null || needsRecompute(loaded.snapshot.date, now())
+
+      if (shouldRecompute) {
+        await recomputeAndSet(loaded.tasks)
       } else {
         dispatch({
           type: 'set',
@@ -99,6 +127,27 @@ export function AppStateProvider({
 
     return () => {
       cancelled = true
+    }
+  }, [repository, now])
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return
+
+      const current = dataRef.current
+      if (current.status !== 'loaded' || current.snapshot === null) return
+      if (!needsRecompute(current.snapshot.date, now())) return
+
+      void (async () => {
+        const snapshot = recomputeSnapshot(current.tasks, now())
+        await repository.saveSnapshot(snapshot)
+        dispatch({ type: 'set', tasks: current.tasks, snapshot })
+      })()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [repository, now])
 
@@ -216,6 +265,17 @@ export function AppStateProvider({
     await repository.saveTasks(nextTasks)
   }
 
+  async function recalculateToday(): Promise<void> {
+    if (data.status !== 'loaded') {
+      throw new Error('recalculateToday called before state finished loading')
+    }
+    const loaded = data
+
+    const snapshot = recomputeSnapshot(loaded.tasks, now())
+    dispatch({ type: 'set', tasks: loaded.tasks, snapshot })
+    await repository.saveSnapshot(snapshot)
+  }
+
   const value: AppState =
     data.status === 'loading'
       ? data
@@ -227,6 +287,7 @@ export function AppStateProvider({
           editTask,
           deleteTask,
           completeTask,
+          recalculateToday,
         }
 
   return (
