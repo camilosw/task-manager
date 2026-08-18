@@ -13,6 +13,7 @@ export type TaskItemProps = {
   task: Task
   onEdit: (id: string, input: EditTaskInput) => Promise<EditTaskResult>
   onDelete: (id: string) => Promise<void>
+  onComplete: (id: string) => Promise<void>
 }
 
 /**
@@ -23,8 +24,22 @@ export type TaskItemProps = {
  * so the only edit-time validation failure possible is a blank name — the
  * `duration`/`priority` branch below only guards against that being
  * impossible in practice.
+ *
+ * Name, duration and an identifiable priority are always visible (see
+ * specs/task-views/spec.md, "Every task display shows name, duration, and
+ * priority"). Once completed, the name renders inside `<s>` and the
+ * "Complete" action disappears, but the row otherwise stays in place — this
+ * is what lets a task completed from the Today tab remain visible there,
+ * struck through, until the plan is next recomputed (see
+ * specs/task-views/spec.md, "Completing a task from the Today tab keeps it
+ * visible").
  */
-export function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
+export function TaskItem({
+  task,
+  onEdit,
+  onDelete,
+  onComplete,
+}: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
 
   async function handleEditSubmit(values: TaskFormValues) {
@@ -64,11 +79,20 @@ export function TaskItem({ task, onEdit, onDelete }: TaskItemProps) {
     )
   }
 
+  const isCompleted = task.completedAt !== null
+
   return (
     <li>
-      <span>{task.name}</span>
+      <span>{isCompleted ? <s>{task.name}</s> : task.name}</span>
       <span>{formatDuration(task.duration)}</span>
-      <span>{PRIORITY_LABELS[task.priority]}</span>
+      <span data-priority={task.priority}>
+        {PRIORITY_LABELS[task.priority]}
+      </span>
+      {!isCompleted && (
+        <button type="button" onClick={() => onComplete(task.id)}>
+          Complete
+        </button>
+      )}
       <button type="button" onClick={() => setIsEditing(true)}>
         Edit
       </button>

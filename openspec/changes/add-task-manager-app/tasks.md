@@ -57,14 +57,14 @@
 
 ## 9. UI — the three tabs
 
-- [ ] 9.1 Integration test and implement: three tabs exist and Today is shown on open
-- [ ] 9.2 Integration test and implement: Today groups by priority in order, hides empty groups including their headings, and orders oldest first within a group
-- [ ] 9.3 Integration test and implement: All lists every pending task ordered by priority then age, and excludes completed tasks
-- [ ] 9.4 Integration test and implement: Completed lists completed tasks, most recently completed first
-- [ ] 9.5 Integration test and implement: completing from Today leaves the task struck through in place and removes it from All
-- [ ] 9.6 Integration test and implement: completing from All removes it from All, and strikes it through in Today when it is part of the plan
-- [ ] 9.7 Integration test and implement: every listed task shows its name, its duration, and an identifiable priority
-- [ ] 9.8 Integration test and implement: each tab shows "empty" when it has nothing to list
+- [x] 9.1 Integration test and implement: three tabs exist and Today is shown on open
+- [x] 9.2 Integration test and implement: Today groups by priority in order, hides empty groups including their headings, and orders oldest first within a group
+- [x] 9.3 Integration test and implement: All lists every pending task ordered by priority then age, and excludes completed tasks
+- [x] 9.4 Integration test and implement: Completed lists completed tasks, most recently completed first
+- [x] 9.5 Integration test and implement: completing from Today leaves the task struck through in place and removes it from All
+- [x] 9.6 Integration test and implement: completing from All removes it from All, and strikes it through in Today when it is part of the plan
+- [x] 9.7 Integration test and implement: every listed task shows its name, its duration, and an identifiable priority
+- [x] 9.8 Integration test and implement: each tab shows "empty" when it has nothing to list
 
 ## 10. Rollover and recalculation
 

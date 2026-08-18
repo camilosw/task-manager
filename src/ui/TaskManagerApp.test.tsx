@@ -31,6 +31,13 @@ async function waitForLoaded() {
   }
 }
 
+/** Switches to the named tab (see tasks.md section 9, which introduces the
+ * Today/All/Completed tab structure that these section-8 tests now have to
+ * navigate to reach the "All tasks" panel they were written against). */
+function switchTab(name: 'Today' | 'All' | 'Completed') {
+  fireEvent.click(screen.getByRole('button', { name }))
+}
+
 /** Fills in and submits the (top-level) create form. */
 function createTaskViaForm(
   name: string,
@@ -84,6 +91,7 @@ describe('creating a task (8.1)', () => {
   it('adds a fully filled task to the All list on submit', async () => {
     renderApp()
     await waitForLoaded()
+    switchTab('All')
 
     createTaskViaForm('Write the report', '30m', 'High')
 
@@ -96,6 +104,7 @@ describe('validating the create form (8.2)', () => {
   it('rejects a blank name with a visible message and creates no task', async () => {
     renderApp()
     const { durationGroup, priorityGroup } = await waitForLoaded()
+    switchTab('All')
 
     fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
     fireEvent.click(
@@ -111,6 +120,7 @@ describe('validating the create form (8.2)', () => {
   it('rejects a missing duration with a message naming duration', async () => {
     renderApp()
     const { priorityGroup } = await waitForLoaded()
+    switchTab('All')
 
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Buy milk' },
@@ -126,6 +136,7 @@ describe('validating the create form (8.2)', () => {
   it('rejects a missing priority with a message naming priority', async () => {
     renderApp()
     const { durationGroup } = await waitForLoaded()
+    switchTab('All')
 
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Buy milk' },
@@ -143,6 +154,7 @@ describe('editing a task (8.3)', () => {
   it("updates the task's name, duration and priority everywhere it is displayed", async () => {
     renderApp()
     await waitForLoaded()
+    switchTab('All')
     createTaskViaForm('Old name', '30m', 'Medium')
 
     const item = (await screen.findByText('Old name')).closest('li')
@@ -177,6 +189,7 @@ describe('editing a task (8.3)', () => {
   it('rejects clearing the name during an edit, leaving the task unchanged', async () => {
     renderApp()
     await waitForLoaded()
+    switchTab('All')
     createTaskViaForm('Keep me', '20m', 'Low')
 
     const item = (await screen.findByText('Keep me')).closest('li')
@@ -200,6 +213,7 @@ describe('deleting a task (8.4)', () => {
   it('removes the task from the list and pulls no replacement into view', async () => {
     renderApp()
     await waitForLoaded()
+    switchTab('All')
     createTaskViaForm('Task A', '30m', 'Medium')
     createTaskViaForm('Task B', '15m', 'High')
 
