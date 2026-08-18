@@ -8,9 +8,9 @@
 
 ## 2. Theme — pure modules
 
-- [ ] 2.1 Test first: `src/ui/systemTheme.test.ts` — `readSystemTheme()` returns `'dark'` when the stub reports dark, `'light'` when it reports light, and `'light'` when `window.matchMedia` is absent. Pins decision 5's guard, which is what keeps every other component from crashing under test. Then write `src/ui/systemTheme.ts`.
-- [ ] 2.2 Test first: `subscribeToSystemTheme(cb)` calls `cb` with the new theme when the stub changes, returns a working unsubscribe, and is a no-op returning a no-op when `matchMedia` is absent. Pins appearance "The system preference changes with no explicit choice recorded".
-- [ ] 2.3 Test first: `src/ui/themeStorage.test.ts` — `readStoredTheme()` returns `null` when nothing is stored, round-trips `'dark'` and `'light'` through `storeTheme()`, and returns `null` (rather than throwing) when `localStorage` access throws. Pins decision 4 and the `localStorage`-can-throw risk. Then write `src/ui/themeStorage.ts`.
+- [x] 2.1 Test first: `src/ui/systemTheme.test.ts` — `readSystemTheme()` returns `'dark'` when the stub reports dark, `'light'` when it reports light, and `'light'` when `window.matchMedia` is absent. Pins decision 5's guard, which is what keeps every other component from crashing under test. Then write `src/ui/systemTheme.ts`.
+- [x] 2.2 Test first: `subscribeToSystemTheme(cb)` calls `cb` with the new theme when the stub changes, returns a working unsubscribe, and is a no-op returning a no-op when `matchMedia` is absent. Pins appearance "The system preference changes with no explicit choice recorded".
+- [x] 2.3 Test first: `src/ui/themeStorage.test.ts` — `readStoredTheme()` returns `null` when nothing is stored, round-trips `'dark'` and `'light'` through `storeTheme()`, and returns `null` (rather than throwing) when `localStorage` access throws. Pins decision 4 and the `localStorage`-can-throw risk. Then write `src/ui/themeStorage.ts`.
 
 ## 3. Theme — provider, toggle, and document wiring
 
