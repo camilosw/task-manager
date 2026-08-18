@@ -4,6 +4,7 @@ import { useAppState } from './useAppState'
 import { CreateTaskForm } from './CreateTaskForm'
 import { TaskList } from './TaskList'
 import { TodayTab } from './TodayTab'
+import { ThemeToggle } from './ThemeToggle'
 
 const TABS = ['today', 'all', 'completed'] as const
 type Tab = (typeof TABS)[number]
@@ -53,7 +54,10 @@ export function TaskManagerApp() {
 
   return (
     <main>
-      <h1>Task Manager</h1>
+      <header>
+        <h1>Task Manager</h1>
+        <ThemeToggle />
+      </header>
       <CreateTaskForm createTask={state.createTask} />
 
       <nav aria-label="Task views">

@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react'
 import { AppStateProvider } from './AppStateProvider'
 import { TaskManagerApp } from './TaskManagerApp'
+import { ThemeProvider } from './ThemeProvider'
 import { createInMemoryRepository } from '../persistence/inMemoryRepository'
 import type { Repository } from '../persistence/repository'
 
@@ -230,5 +231,51 @@ describe('deleting a task (8.4)', () => {
     // exactly one item remains.
     expect(screen.getByText('Task B')).toBeTruthy()
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+})
+
+describe('theme toggle in the header (3.4)', () => {
+  const THEME_TOGGLE_NAME = 'Toggle theme between light and dark'
+
+  /** Unlike `renderApp` above, wraps in `ThemeProvider` too — the real
+   * composition root (`App.tsx`) always does, but the shared `renderApp`
+   * helper is left as-is here so the suites for other sections (and the
+   * rest of this file) keep exercising `TaskManagerApp` exactly as they
+   * did before this control existed. */
+  function renderThemedApp(
+    repository: Repository = createInMemoryRepository(),
+  ) {
+    return render(
+      <ThemeProvider>
+        <AppStateProvider repository={repository} now={() => FIXED_NOW}>
+          <TaskManagerApp />
+        </AppStateProvider>
+      </ThemeProvider>,
+    )
+  }
+
+  it('exposes an accessible name stating it toggles light and dark, and is a native, keyboard-reachable button', async () => {
+    renderThemedApp()
+    await waitForLoaded()
+
+    const toggle = screen.getByRole('button', { name: THEME_TOGGLE_NAME })
+    expect(toggle.tagName).toBe('BUTTON')
+    expect(toggle.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('does not change the active tab when the theme is switched', async () => {
+    renderThemedApp()
+    await waitForLoaded()
+    switchTab('All')
+    expect(
+      screen.getByRole('button', { name: 'All', pressed: true }),
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: THEME_TOGGLE_NAME }))
+
+    expect(
+      screen.getByRole('button', { name: 'All', pressed: true }),
+    ).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'All tasks' })).toBeTruthy()
   })
 })

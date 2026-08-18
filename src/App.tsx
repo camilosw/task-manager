@@ -1,5 +1,6 @@
 import { AppStateProvider } from './ui/AppStateProvider'
 import { TaskManagerApp } from './ui/TaskManagerApp'
+import { ThemeProvider } from './ui/ThemeProvider'
 import { createIndexedDbRepository } from './persistence/indexedDbRepository'
 
 // Created once at module scope rather than inside the component: the
@@ -10,9 +11,11 @@ const repository = createIndexedDbRepository()
 
 function App() {
   return (
-    <AppStateProvider repository={repository}>
-      <TaskManagerApp />
-    </AppStateProvider>
+    <ThemeProvider>
+      <AppStateProvider repository={repository}>
+        <TaskManagerApp />
+      </AppStateProvider>
+    </ThemeProvider>
   )
 }
 

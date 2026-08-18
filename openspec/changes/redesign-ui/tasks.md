@@ -14,11 +14,11 @@
 
 ## 3. Theme — provider, toggle, and document wiring
 
-- [ ] 3.1 Test first: `src/ui/ThemeProvider.test.tsx` — with nothing stored and the system reporting dark, `<html>` carries **no** `data-theme` attribute and `useTheme()` reports a resolved theme of `'dark'`; with the system reporting light it reports `'light'`. Pins appearance "First launch on a device set to dark" / "set to light" and decision 2's absent-attribute state. Then write `src/ui/ThemeProvider.tsx` and `src/ui/useTheme.ts`.
-- [ ] 3.2 Test first: toggling writes `data-theme="dark"` to `<html>` and stores the choice; remounting with the system set to light still resolves dark. Pins "The override survives a reload" and "An explicit choice outranks a later system change".
-- [ ] 3.3 Test first: with no explicit choice stored, driving the `matchMedia` stub from light to dark updates the resolved theme without any attribute being written. Pins the system-follows scenario end to end.
-- [ ] 3.4 Test first: the header's theme control exposes an accessible name stating it toggles light and dark, is reachable from the keyboard, and switching does not change the active tab. Pins appearance "The control is identifiable without sight of its icon" and part of "Switching the theme preserves the current context" — the open-sheet half of that scenario is finished in 9.2, once the sheet exists.
-- [ ] 3.5 Test first: changing the theme updates the `content` of the single `<meta name="theme-color">` tag. Pins appearance "The browser and installed application chrome match the active theme" via decision 12.
+- [x] 3.1 Test first: `src/ui/ThemeProvider.test.tsx` — with nothing stored and the system reporting dark, `<html>` carries **no** `data-theme` attribute and `useTheme()` reports a resolved theme of `'dark'`; with the system reporting light it reports `'light'`. Pins appearance "First launch on a device set to dark" / "set to light" and decision 2's absent-attribute state. Then write `src/ui/ThemeProvider.tsx` and `src/ui/useTheme.ts`.
+- [x] 3.2 Test first: toggling writes `data-theme="dark"` to `<html>` and stores the choice; remounting with the system set to light still resolves dark. Pins "The override survives a reload" and "An explicit choice outranks a later system change".
+- [x] 3.3 Test first: with no explicit choice stored, driving the `matchMedia` stub from light to dark updates the resolved theme without any attribute being written. Pins the system-follows scenario end to end.
+- [x] 3.4 Test first: the header's theme control exposes an accessible name stating it toggles light and dark, is reachable from the keyboard, and switching does not change the active tab. Pins appearance "The control is identifiable without sight of its icon" and part of "Switching the theme preserves the current context" — the open-sheet half of that scenario is finished in 9.2, once the sheet exists.
+- [x] 3.5 Test first: changing the theme updates the `content` of the single `<meta name="theme-color">` tag. Pins appearance "The browser and installed application chrome match the active theme" via decision 12.
 
 ## 4. Action feedback
 
