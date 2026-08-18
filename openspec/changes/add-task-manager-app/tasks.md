@@ -29,11 +29,11 @@
 
 ## 5. Domain — snapshot membership
 
-- [ ] 5.1 Write a failing test that membership is `plannedIds ∪ admittedIds` resolved against existing tasks, with unresolved IDs skipped, then implement resolution
-- [ ] 5.2 Write a failing test that a task becoming urgent is appended to `admittedIds` and that nothing is evicted to make room, then implement admission
-- [ ] 5.3 Write a failing test for the asymmetry — a task in `admittedIds` that stops being urgent is removed, while a task in `plannedIds` that goes urgent and back is kept — then implement removal
-- [ ] 5.4 Write a failing test that deleting a task prunes its ID from both lists, and that membership resolves correctly even when pruning has not happened, then implement pruning
-- [ ] 5.5 Write a failing test that recomputation replaces both lists wholesale rather than extending them, then implement recomputation
+- [x] 5.1 Write a failing test that membership is `plannedIds ∪ admittedIds` resolved against existing tasks, with unresolved IDs skipped, then implement resolution
+- [x] 5.2 Write a failing test that a task becoming urgent is appended to `admittedIds` and that nothing is evicted to make room, then implement admission
+- [x] 5.3 Write a failing test for the asymmetry — a task in `admittedIds` that stops being urgent is removed, while a task in `plannedIds` that goes urgent and back is kept — then implement removal
+- [x] 5.4 Write a failing test that deleting a task prunes its ID from both lists, and that membership resolves correctly even when pruning has not happened, then implement pruning
+- [x] 5.5 Write a failing test that recomputation replaces both lists wholesale rather than extending them, then implement recomputation
 
 ## 6. Persistence
 
