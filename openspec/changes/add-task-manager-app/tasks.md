@@ -37,10 +37,10 @@
 
 ## 6. Persistence
 
-- [ ] 6.1 Define the repository port: load everything, save tasks, save the snapshot
-- [ ] 6.2 Write the shared contract suite against the port — round-trip tasks and snapshot, absent data yields empty state, timestamps survive serialization — then implement the in-memory repository until it passes
-- [ ] 6.3 Run the same contract suite unchanged against the IndexedDB implementation over `fake-indexeddb`, and implement it until green
-- [ ] 6.4 Write a failing test that reopening the database at the same version preserves existing data, then pin the database name and version
+- [x] 6.1 Define the repository port: load everything, save tasks, save the snapshot
+- [x] 6.2 Write the shared contract suite against the port — round-trip tasks and snapshot, absent data yields empty state, timestamps survive serialization — then implement the in-memory repository until it passes
+- [x] 6.3 Run the same contract suite unchanged against the IndexedDB implementation over `fake-indexeddb`, and implement it until green
+- [x] 6.4 Write a failing test that reopening the database at the same version preserves existing data, then pin the database name and version
 
 ## 7. Application state
 
