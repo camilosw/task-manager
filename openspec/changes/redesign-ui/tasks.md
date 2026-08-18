@@ -4,7 +4,7 @@
 
 ## 1. Test environment
 
-- [ ] 1.1 Add `vitest.setup.ts` and register it as `test.setupFiles` in `vite.config.ts`. It installs a controllable `window.matchMedia` stub with a `setSystemTheme('light' | 'dark')` helper, and shims `HTMLDialogElement.prototype.showModal`/`close` to toggle `open` (design.md decisions 5 and 6 — both are `undefined` in this jsdom). Verify by running `npm test`: all 2,369 lines of existing tests still pass, unchanged.
+- [x] 1.1 Add `vitest.setup.ts` and register it as `test.setupFiles` in `vite.config.ts`. It installs a controllable `window.matchMedia` stub with a `setSystemTheme('light' | 'dark')` helper, and shims `HTMLDialogElement.prototype.showModal`/`close` to toggle `open` (design.md decisions 5 and 6 — both are `undefined` in this jsdom). Verify by running `npm test`: all 2,369 lines of existing tests still pass, unchanged.
 
 ## 2. Theme — pure modules
 

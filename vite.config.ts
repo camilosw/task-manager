@@ -49,6 +49,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     // No test files exist yet at this stage of scaffolding (they are added
     // section by section per tasks.md); do not treat that as a failure.
