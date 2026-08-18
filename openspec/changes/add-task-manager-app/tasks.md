@@ -44,9 +44,9 @@
 
 ## 7. Application state
 
-- [ ] 7.1 Write a failing hook test that the store exposes a loading state which resolves once the repository has loaded, then implement the context provider
-- [ ] 7.2 Write a failing test that every mutation passes through a domain function and is persisted afterwards, then implement the reducer and the persistence effect
-- [ ] 7.3 Write a failing test that a plan is computed on first ever load when no snapshot exists, then wire it
+- [x] 7.1 Write a failing hook test that the store exposes a loading state which resolves once the repository has loaded, then implement the context provider
+- [x] 7.2 Write a failing test that every mutation passes through a domain function and is persisted afterwards, then implement the reducer and the persistence effect
+- [x] 7.3 Write a failing test that a plan is computed on first ever load when no snapshot exists, then wire it
 
 ## 8. UI — creating, editing and deleting
 
