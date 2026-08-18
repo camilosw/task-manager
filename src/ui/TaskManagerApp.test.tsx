@@ -279,3 +279,165 @@ describe('theme toggle in the header (3.4)', () => {
     expect(screen.getByRole('region', { name: 'All tasks' })).toBeTruthy()
   })
 })
+
+describe('the feedback region is always mounted (4.2)', () => {
+  it('is present before any action, empty, and carries role=status with aria-live=polite', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    const region = screen.getByRole('status')
+    expect(region.textContent).toBe('')
+    expect(region.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('changes the same element in place rather than a new one being inserted', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+
+    // Captured before any action: decision 7's whole point is that this is
+    // the same node whose text later changes, not a node that shows up
+    // once there is something to say.
+    const region = screen.getByRole('status')
+    expect(region.textContent).toBe('')
+
+    createTaskViaForm('Task A', '30m', 'Medium')
+
+    await waitFor(() => {
+      expect(region.textContent).toBe('Task added')
+    })
+    expect(screen.getByRole('status')).toBe(region)
+  })
+})
+
+describe('action feedback follows every completed action (4.3)', () => {
+  it('shows "Task added" after creating a task', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+
+    createTaskViaForm('Write the report', '30m', 'High')
+
+    expect(await screen.findByText('Task added')).toBeTruthy()
+  })
+
+  it('shows "Task completed" after completing a task', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+    createTaskViaForm('Wash dishes', '15m', 'Low')
+
+    const item = (await screen.findByText('Wash dishes')).closest('li')
+    if (!item) throw new Error('expected a list item')
+    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+
+    expect(await screen.findByText('Task completed')).toBeTruthy()
+  })
+
+  it('shows "Task deleted" after deleting a task', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+    createTaskViaForm('Throw away', '10m', 'Medium')
+
+    const item = (await screen.findByText('Throw away')).closest('li')
+    if (!item) throw new Error('expected a list item')
+    fireEvent.click(within(item).getByRole('button', { name: 'Delete' }))
+
+    expect(await screen.findByText('Task deleted')).toBeTruthy()
+  })
+
+  it('shows "Today recalculated" after recalculating today', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate today' }))
+
+    expect(await screen.findByText('Today recalculated')).toBeTruthy()
+  })
+
+  it('shows the validation message, and not "Task added", for a creation rejected for a blank name', async () => {
+    renderApp()
+    const { durationGroup, priorityGroup } = await waitForLoaded()
+    switchTab('All')
+
+    fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
+    fireEvent.click(
+      within(priorityGroup).getByRole('button', { name: 'Medium' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    expect(await screen.findByText('Name is required.')).toBeTruthy()
+    expect(screen.queryByText('Task added')).toBeNull()
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+})
+
+describe('the confirmation is identical from every tab (4.4)', () => {
+  it('shows the same message and leaves the tab in view unchanged whether completing from Today or from All', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+    // Urgent tasks are admitted to today's plan unconditionally (see
+    // src/domain/dailyPlan.ts), so this one is reachable from Today right
+    // after creation with no recalculation needed.
+    createTaskViaForm('From today', '15m', 'Urgent')
+    createTaskViaForm('From all', '15m', 'Low')
+
+    switchTab('Today')
+    const todayItem = (await screen.findByText('From today')).closest('li')
+    if (!todayItem) throw new Error('expected a list item')
+    fireEvent.click(within(todayItem).getByRole('button', { name: 'Complete' }))
+
+    expect(await screen.findByText('Task completed')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Today', pressed: true }),
+    ).toBeTruthy()
+
+    switchTab('All')
+    const allItem = (await screen.findByText('From all')).closest('li')
+    if (!allItem) throw new Error('expected a list item')
+    fireEvent.click(within(allItem).getByRole('button', { name: 'Complete' }))
+
+    // Exactly the same message as from Today, and the All tab - not Today
+    // - is still the tab in view.
+    expect(await screen.findByText('Task completed')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'All', pressed: true }),
+    ).toBeTruthy()
+  })
+
+  it('never moves focus onto the feedback region when completing via the keyboard', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+    createTaskViaForm('Keyboard task', '15m', 'Medium')
+
+    const item = (await screen.findByText('Keyboard task')).closest('li')
+    if (!item) throw new Error('expected a list item')
+    const completeButton = within(item).getByRole('button', {
+      name: 'Complete',
+    })
+    completeButton.focus()
+    expect(document.activeElement).toBe(completeButton)
+
+    fireEvent.click(completeButton)
+
+    const status = await screen.findByText('Task completed')
+    // The confirmation must never be the thing that receives focus (see
+    // specs/action-feedback/spec.md, "The confirmation reaches assistive
+    // technology without stealing focus"). This is the part of "Focus stays
+    // where the user left it" that this section's wiring owns and can pin
+    // today. It cannot yet assert that focus stays *on* the "Complete"
+    // button itself: `TaskItem`'s conditional `{!isCompleted && <button>}`
+    // (pre-existing, unrelated to this section) unmounts that button
+    // synchronously the instant `AppStateProvider.completeTask` dispatches
+    // - before this wrapper's own `feedback.show` call even runs - so
+    // jsdom moves `document.activeElement` to `<body>` regardless of
+    // anything this section does. That half of the scenario becomes
+    // reachable in section 6, once the checkbox (which stays in place,
+    // merely toggling checked/disabled, per design.md decision 8) replaces
+    // this vanishing button.
+    expect(document.activeElement).not.toBe(status)
+  })
+})
