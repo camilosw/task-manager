@@ -50,10 +50,10 @@
 
 ## 8. UI — creating, editing and deleting
 
-- [ ] 8.1 Integration test and implement: the create form offers exactly nine duration buttons and five priority choices, and submitting a complete task adds it to the All tab
-- [ ] 8.2 Integration test and implement: a blank name is rejected with a visible message, and a missing duration or priority is rejected with a message naming what is missing
-- [ ] 8.3 Integration test and implement: editing a task updates it everywhere it is displayed, and clearing the name is rejected
-- [ ] 8.4 Integration test and implement: deleting a task removes it from every tab and pulls no replacement into Today
+- [x] 8.1 Integration test and implement: the create form offers exactly nine duration buttons and five priority choices, and submitting a complete task adds it to the All tab
+- [x] 8.2 Integration test and implement: a blank name is rejected with a visible message, and a missing duration or priority is rejected with a message naming what is missing
+- [x] 8.3 Integration test and implement: editing a task updates it everywhere it is displayed, and clearing the name is rejected
+- [x] 8.4 Integration test and implement: deleting a task removes it from every tab and pulls no replacement into Today
 
 ## 9. UI — the three tabs
 
