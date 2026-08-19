@@ -1,6 +1,7 @@
 import type { EditTaskInput, EditTaskResult, Task } from '../domain/task'
 import { EmptyState } from './EmptyState'
 import { TaskItem } from './TaskItem'
+import './TaskList.css'
 
 export type TaskListProps = {
   tasks: Task[]
@@ -28,7 +29,7 @@ export function TaskList({
   }
 
   return (
-    <ul>
+    <ul className="task-list">
       {tasks.map((task) => (
         <TaskItem
           key={task.id}

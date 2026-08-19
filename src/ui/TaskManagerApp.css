@@ -1,0 +1,123 @@
+/**
+ * The app shell: the responsive column, the header, the tab bar, the
+ * per-tab panels, the always-mounted feedback region, and the
+ * "Recalculate today" action (design.md, decisions 9 and 12; tasks.md
+ * 8.3/8.4).
+ */
+
+/* The responsive shell (design.md, decision 9): full-bleed to a 480px
+   centered column, with a 16px gutter on each side. The page itself
+   scrolls - no inner scroll region, no device frame (specs/appearance/spec.md,
+   "The layout adapts to the viewport width"). The 96px of bottom padding
+   keeps the last row and "Recalculate today" scrollable clear of the
+   floating add-task control (decision 9's bottom spacer). */
+.app {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding-inline: 16px;
+  padding-bottom: 96px;
+  min-height: 100%;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 0 14px;
+}
+
+.app__title {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Always mounted and empty until `useActionFeedback.show` puts text in it
+   (design.md, decision 7) - styled to have no visible footprint while
+   empty, so "no trace of it remains on screen" holds without the element
+   ever being removed from the DOM. `pointer-events: none` keeps it from
+   ever intercepting a tap even while a message is showing, matching "Work
+   continues while a confirmation is visible". */
+.app__feedback {
+  position: fixed;
+  left: 50%;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: calc(100% - 32px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.app__feedback:not(:empty) {
+  display: inline-block;
+  padding: 9px 16px;
+  border-radius: 20px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+
+.app__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.app__tab {
+  flex: 1;
+  padding: 9px 0;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.12s ease;
+}
+
+.app__tab[aria-pressed='true'] {
+  font-weight: 600;
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.app__panel {
+  padding-top: 18px;
+}
+
+.app__recalculate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 20px 0 8px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  width: fit-content;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.app__recalculate:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.app__recalculate:active {
+  transform: scale(0.96);
+}
+
+.app__recalculate svg {
+  width: 14px;
+  height: 14px;
+}

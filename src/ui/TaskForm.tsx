@@ -3,6 +3,7 @@ import { DURATIONS, formatDuration, type Duration } from '../domain/duration'
 import { PRIORITIES, type Priority } from '../domain/priority'
 import type { TaskValidationField } from '../domain/task'
 import { PRIORITY_LABELS } from './priorityLabels'
+import './TaskForm.css'
 
 const FIELD_MESSAGES: Record<TaskValidationField, string> = {
   name: 'Name is required.',
@@ -99,60 +100,82 @@ export function TaskForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>{heading}</h2>
+    <form className="task-form" onSubmit={handleSubmit}>
+      <h2 className="task-form__heading">{heading}</h2>
 
-      <label htmlFor={nameId}>Name</label>
-      <input
-        ref={nameInputRef}
-        id={nameId}
-        type="text"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
+      <div className="task-form__field">
+        <label htmlFor={nameId} className="task-form__label">
+          Name
+        </label>
+        <input
+          ref={nameInputRef}
+          id={nameId}
+          type="text"
+          className="task-form__input"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </div>
 
-      <fieldset>
-        <legend>Duration</legend>
-        {DURATIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={duration === option}
-            onClick={() => setDuration(option)}
-          >
-            {formatDuration(option)}
-          </button>
-        ))}
+      <fieldset className="task-form__fieldset">
+        <legend className="task-form__label">Duration</legend>
+        <div className="task-form__chips">
+          {DURATIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="task-form__chip"
+              aria-pressed={duration === option}
+              onClick={() => setDuration(option)}
+            >
+              {formatDuration(option)}
+            </button>
+          ))}
+        </div>
       </fieldset>
 
-      <fieldset>
-        <legend>Priority</legend>
-        {PRIORITIES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={priority === option}
-            onClick={() => setPriority(option)}
-          >
-            {PRIORITY_LABELS[option]}
-          </button>
-        ))}
+      <fieldset className="task-form__fieldset">
+        <legend className="task-form__label">Priority</legend>
+        <div className="task-form__chips">
+          {PRIORITIES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="task-form__chip task-form__chip--priority"
+              data-priority={option}
+              aria-pressed={priority === option}
+              onClick={() => setPriority(option)}
+            >
+              {PRIORITY_LABELS[option]}
+            </button>
+          ))}
+        </div>
       </fieldset>
 
       {errors.length > 0 && (
-        <div role="alert">
+        <div role="alert" className="task-form__errors">
           {errors.map((field) => (
-            <p key={field}>{FIELD_MESSAGES[field]}</p>
+            <p key={field} className="task-form__error">
+              {FIELD_MESSAGES[field]}
+            </p>
           ))}
         </div>
       )}
 
-      <button type="submit">{submitLabel}</button>
-      {onCancel && (
-        <button type="button" onClick={onCancel}>
-          Cancel
+      <div className="task-form__actions">
+        <button type="submit" className="task-form__submit">
+          {submitLabel}
         </button>
-      )}
+        {onCancel && (
+          <button
+            type="button"
+            className="task-form__cancel"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }

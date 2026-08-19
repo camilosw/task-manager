@@ -1,0 +1,55 @@
+/**
+ * The Today tab's priority groups (specs/task-views/spec.md, "The Today tab
+ * groups tasks by priority"). The heading's own text names its level; the
+ * marker beside it is a sibling, not a child, of the <h3> (see TodayTab.tsx)
+ * so the heading's accessible text is never anything but the plain level
+ * name - the marker "SHALL NOT be the only thing distinguishing one heading
+ * from another".
+ */
+
+.today-group {
+  margin-bottom: 22px;
+}
+
+.today-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.today-group__heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+}
+
+.today-group__marker {
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  flex: none;
+  background: var(--priority-medium-marker);
+}
+
+.today-group__marker[data-priority='urgent'] {
+  background: var(--priority-urgent-marker);
+}
+.today-group__marker[data-priority='high'] {
+  background: var(--priority-high-marker);
+}
+.today-group__marker[data-priority='medium'] {
+  background: var(--priority-medium-marker);
+}
+.today-group__marker[data-priority='low'] {
+  background: var(--priority-low-marker);
+}
+.today-group__marker[data-priority='very-low'] {
+  background: var(--priority-very-low-marker);
+}
+
+.today-group__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

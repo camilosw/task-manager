@@ -1,0 +1,142 @@
+/**
+ * A single task row: the checkbox, the name/duration/priority stack, and
+ * the edit/delete icon controls (specs/task-views/spec.md, "Every task
+ * display shows name, duration, and priority"; specs/task-management/spec.md,
+ * "Completing a task from its checkbox" and "Editing and deleting are named
+ * controls on every task row"). Also styles the in-place edit card via
+ * `.task-row .task-form` in TaskForm.css.
+ */
+
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The in-place edit form replaces the row's own flex layout - it lays
+   itself out as a card via `.task-row .task-form` in TaskForm.css. */
+.task-row--editing {
+  display: block;
+  padding: 0;
+  border-bottom: none;
+}
+
+.task-row__checkbox {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border-radius: 6px;
+  accent-color: var(--accent);
+}
+
+.task-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-row__name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+
+.task-row__name s {
+  color: var(--text-faint);
+  text-decoration-color: var(--text-faint);
+}
+
+.task-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.task-row__duration {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.task-row__priority {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  /* Falls back to the medium palette if a selector below somehow doesn't
+     match; every value this app can actually assign is covered below. */
+  background: var(--priority-medium-bg);
+  color: var(--priority-medium-fg);
+}
+
+.task-row__priority[data-priority='urgent'] {
+  background: var(--priority-urgent-bg);
+  color: var(--priority-urgent-fg);
+}
+.task-row__priority[data-priority='high'] {
+  background: var(--priority-high-bg);
+  color: var(--priority-high-fg);
+}
+.task-row__priority[data-priority='medium'] {
+  background: var(--priority-medium-bg);
+  color: var(--priority-medium-fg);
+}
+.task-row__priority[data-priority='low'] {
+  background: var(--priority-low-bg);
+  color: var(--priority-low-fg);
+}
+.task-row__priority[data-priority='very-low'] {
+  background: var(--priority-very-low-bg);
+  color: var(--priority-very-low-fg);
+}
+
+.task-row__actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+  padding-top: 1px;
+}
+
+.task-row__icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.task-row__icon-button:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.task-row__icon-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.task-row__delete:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in oklch, var(--danger) 12%, transparent);
+}

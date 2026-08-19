@@ -1,0 +1,145 @@
+/**
+ * The application's token layer (see design.md, decision 1 and decision 2):
+ * one place where color is declared, consumed everywhere else as a `var()`.
+ *
+ * Three states, one attribute (design.md, decision 2): the complete light
+ * palette is declared once on bare `:root`. The dark overrides are declared
+ * twice, verbatim, in the two blocks below - never only in one - which is
+ * what lets the same tokens resolve correctly whether the user has never
+ * made a choice (the media query alone decides) or made an explicit one
+ * (the attribute decides, regardless of what the system prefers):
+ *
+ *   :root                                            -> light (the default)
+ *   @media (prefers-color-scheme: dark) :root:not([data-theme='light']) -> dark
+ *     (system prefers dark, and no explicit *light* choice overrides it)
+ *   :root[data-theme='dark']                          -> dark
+ *     (explicit dark choice, regardless of system preference)
+ *
+ * Every value below is ported verbatim from `mockups/task-manager.html`,
+ * oklch() included (see design.md, decision 2's palette table and the
+ * "oklch has no fallback" risk: every browser that supports this app's
+ * required service worker and IndexedDB features also supports oklch()).
+ */
+
+:root {
+  /* Base palette - light (the default; no dark override applies) */
+  --bg: oklch(0.985 0.003 250);
+  --surface: #ffffff;
+  --surface-2: oklch(0.965 0.006 250);
+  --border: oklch(0.885 0.008 250);
+  --text: oklch(0.2 0.02 260);
+  --text-muted: oklch(0.5 0.018 260);
+  --text-faint: oklch(0.64 0.012 260);
+  --accent: oklch(0.5 0.16 258);
+  --accent-text: #ffffff;
+  --danger: oklch(0.53 0.19 25);
+
+  /*
+   * Priority palette - light (design.md, decision 3): thirty declared
+   * values, not a runtime formula. Each of the five levels carries a
+   * `-marker` (the dot/border color), a `-bg` (badge background) and a
+   * `-fg` (badge text) token, derived from the mockup's
+   * `priorityColors(key, theme)` function and flattened here:
+   *
+   *   marker: oklch(0.55 chroma hue)              [light]
+   *   bg:     oklch(0.94 chroma * 0.4 hue)         [light]
+   *   fg:     oklch(0.38 chroma * 1 hue)           [light]
+   *
+   * carried over hue/chroma per level: urgent 22/0.17, high 55/0.15,
+   * medium 95/0.13, low 178/0.10, very low 260/0.015.
+   */
+  --priority-urgent-marker: oklch(0.55 0.17 22);
+  --priority-urgent-bg: oklch(0.94 0.068 22);
+  --priority-urgent-fg: oklch(0.38 0.17 22);
+
+  --priority-high-marker: oklch(0.55 0.15 55);
+  --priority-high-bg: oklch(0.94 0.06 55);
+  --priority-high-fg: oklch(0.38 0.15 55);
+
+  --priority-medium-marker: oklch(0.55 0.13 95);
+  --priority-medium-bg: oklch(0.94 0.052 95);
+  --priority-medium-fg: oklch(0.38 0.13 95);
+
+  --priority-low-marker: oklch(0.55 0.1 178);
+  --priority-low-bg: oklch(0.94 0.04 178);
+  --priority-low-fg: oklch(0.38 0.1 178);
+
+  --priority-very-low-marker: oklch(0.55 0.015 260);
+  --priority-very-low-bg: oklch(0.94 0.006 260);
+  --priority-very-low-fg: oklch(0.38 0.015 260);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: oklch(0.19 0.012 260);
+    --surface: oklch(0.235 0.014 260);
+    --surface-2: oklch(0.28 0.016 260);
+    --border: oklch(0.34 0.018 260);
+    --text: oklch(0.95 0.006 260);
+    --text-muted: oklch(0.68 0.014 260);
+    --text-faint: oklch(0.5 0.012 260);
+    --accent: oklch(0.72 0.135 258);
+    --accent-text: oklch(0.15 0.03 258);
+    --danger: oklch(0.68 0.16 25);
+
+    /*
+     * dark: marker: oklch(0.72 chroma hue)
+     *       bg:     oklch(0.28 chroma * 0.55 hue)
+     *       fg:     oklch(0.86 chroma * 0.7 hue)
+     */
+    --priority-urgent-marker: oklch(0.72 0.17 22);
+    --priority-urgent-bg: oklch(0.28 0.0935 22);
+    --priority-urgent-fg: oklch(0.86 0.119 22);
+
+    --priority-high-marker: oklch(0.72 0.15 55);
+    --priority-high-bg: oklch(0.28 0.0825 55);
+    --priority-high-fg: oklch(0.86 0.105 55);
+
+    --priority-medium-marker: oklch(0.72 0.13 95);
+    --priority-medium-bg: oklch(0.28 0.0715 95);
+    --priority-medium-fg: oklch(0.86 0.091 95);
+
+    --priority-low-marker: oklch(0.72 0.1 178);
+    --priority-low-bg: oklch(0.28 0.055 178);
+    --priority-low-fg: oklch(0.86 0.07 178);
+
+    --priority-very-low-marker: oklch(0.72 0.015 260);
+    --priority-very-low-bg: oklch(0.28 0.0083 260);
+    --priority-very-low-fg: oklch(0.86 0.0105 260);
+  }
+}
+
+:root[data-theme='dark'] {
+  /* Identical to the media-query block above - an explicit dark choice
+     must resolve the same palette the system preference would. */
+  --bg: oklch(0.19 0.012 260);
+  --surface: oklch(0.235 0.014 260);
+  --surface-2: oklch(0.28 0.016 260);
+  --border: oklch(0.34 0.018 260);
+  --text: oklch(0.95 0.006 260);
+  --text-muted: oklch(0.68 0.014 260);
+  --text-faint: oklch(0.5 0.012 260);
+  --accent: oklch(0.72 0.135 258);
+  --accent-text: oklch(0.15 0.03 258);
+  --danger: oklch(0.68 0.16 25);
+
+  --priority-urgent-marker: oklch(0.72 0.17 22);
+  --priority-urgent-bg: oklch(0.28 0.0935 22);
+  --priority-urgent-fg: oklch(0.86 0.119 22);
+
+  --priority-high-marker: oklch(0.72 0.15 55);
+  --priority-high-bg: oklch(0.28 0.0825 55);
+  --priority-high-fg: oklch(0.86 0.105 55);
+
+  --priority-medium-marker: oklch(0.72 0.13 95);
+  --priority-medium-bg: oklch(0.28 0.0715 95);
+  --priority-medium-fg: oklch(0.86 0.091 95);
+
+  --priority-low-marker: oklch(0.72 0.1 178);
+  --priority-low-bg: oklch(0.28 0.055 178);
+  --priority-low-fg: oklch(0.86 0.07 178);
+
+  --priority-very-low-marker: oklch(0.72 0.015 260);
+  --priority-very-low-bg: oklch(0.28 0.0083 260);
+  --priority-very-low-fg: oklch(0.86 0.0105 260);
+}

@@ -1,0 +1,14 @@
+/**
+ * The single-word empty-state marker shared by every tab (design.md,
+ * decision 10 [tasks.md numbering]: "Every empty state uses the single
+ * word 'empty'"). Legible in both themes via `--text-faint`
+ * (specs/appearance/spec.md, "Empty states render in both themes").
+ */
+
+.empty-state {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 48px 0;
+}

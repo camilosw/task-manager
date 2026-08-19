@@ -1,5 +1,7 @@
 import { useContext } from 'react'
 import { ThemeContext } from './themeContext'
+import { MoonIcon, SunIcon } from './icons'
+import './ThemeToggle.css'
 
 /**
  * The header's theme override control (see specs/appearance/spec.md, "The
@@ -25,10 +27,11 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
+      className="theme-toggle"
       onClick={value.toggleTheme}
       aria-label="Toggle theme between light and dark"
     >
-      {value.theme === 'dark' ? 'Dark' : 'Light'}
+      {value.theme === 'dark' ? <MoonIcon /> : <SunIcon />}
     </button>
   )
 }

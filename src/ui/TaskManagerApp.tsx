@@ -8,6 +8,8 @@ import { TaskList } from './TaskList'
 import { TodayTab } from './TodayTab'
 import { ThemeToggle } from './ThemeToggle'
 import { useActionFeedback } from './useActionFeedback'
+import { RefreshIcon } from './icons'
+import './TaskManagerApp.css'
 
 const TABS = ['today', 'all', 'completed'] as const
 type Tab = (typeof TABS)[number]
@@ -114,9 +116,9 @@ export function TaskManagerApp() {
   })
 
   return (
-    <main>
-      <header>
-        <h1>Task Manager</h1>
+    <main className="app">
+      <header className="app__header">
+        <h1 className="app__title">Task Manager</h1>
         <ThemeToggle />
       </header>
 
@@ -126,17 +128,18 @@ export function TaskManagerApp() {
           one that is already present and whose text merely changes is
           announced dependably, which is the entire reason this exists ahead
           of any action rather than being rendered conditionally. */}
-      <p role="status" aria-live="polite">
+      <p role="status" aria-live="polite" className="app__feedback">
         {feedback.message}
       </p>
 
       <CreateTaskSheet createTask={handleCreateTask} />
 
-      <nav aria-label="Task views">
+      <nav aria-label="Task views" className="app__tabs">
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            className="app__tab"
             aria-pressed={activeTab === tab}
             onClick={() => setActiveTab(tab)}
           >
@@ -146,8 +149,11 @@ export function TaskManagerApp() {
       </nav>
 
       {activeTab === 'today' && (
-        <section aria-label="Today">
-          <h2>Today</h2>
+        <section aria-label="Today" className="app__panel">
+          {/* The tab bar above already names this panel for sighted users;
+              this heading stays for structure and for anyone navigating by
+              heading, visually hidden rather than duplicated on screen. */}
+          <h2 className="sr-only">Today</h2>
           <TodayTab
             tasks={state.tasks}
             snapshot={state.snapshot}
@@ -161,15 +167,20 @@ export function TaskManagerApp() {
               action sits below the groups"), while staying present even
               when there is nothing to group ("The action is available on an
               empty plan"). */}
-          <button type="button" onClick={() => handleRecalculateToday()}>
+          <button
+            type="button"
+            className="app__recalculate"
+            onClick={() => handleRecalculateToday()}
+          >
+            <RefreshIcon />
             Recalculate today
           </button>
         </section>
       )}
 
       {activeTab === 'all' && (
-        <section aria-label="All tasks">
-          <h2>All</h2>
+        <section aria-label="All tasks" className="app__panel">
+          <h2 className="sr-only">All</h2>
           <TaskList
             tasks={allTasks}
             onEdit={state.editTask}
@@ -180,8 +191,8 @@ export function TaskManagerApp() {
       )}
 
       {activeTab === 'completed' && (
-        <section aria-label="Completed tasks">
-          <h2>Completed</h2>
+        <section aria-label="Completed tasks" className="app__panel">
+          <h2 className="sr-only">Completed</h2>
           <TaskList
             tasks={completedTasksSorted}
             onEdit={state.editTask}

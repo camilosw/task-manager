@@ -50,11 +50,11 @@
 
 ## 8. Stylesheets
 
-- [ ] 8.1 Replace `src/index.css` with a reset and base layer, deleting the scaffold's `#root` 1126px column, `h1`/`h2` sizing, and `code`/`.counter` rules outright rather than overriding them (design.md Migration Plan).
-- [ ] 8.2 Write `src/styles/tokens.css`: the complete light palette on bare `:root`, the dark overrides in both `@media (prefers-color-scheme: dark) :root:not([data-theme='light'])` and `:root[data-theme='dark']`, and the thirty priority values from decision 3. No color may be declared only inside a media or attribute block.
-- [ ] 8.3 Write the per-component stylesheets consuming only those tokens: shell and header, tab bar, task row with its priority badge and duration chip, form fields and duration/priority chips, the creation sheet, the add-task control, the feedback region, group headings, and the empty state. Replace the icons with the inline SVG module from decision 14, keeping every `aria-label` intact.
-- [ ] 8.4 Apply the responsive shell — full-bleed to a 480px centered cap with 16px gutters — plus the add-task control's `right: max(16px, calc(50% - 240px + 16px))` placement, its `env(safe-area-inset-bottom)` offset, and the 96px bottom spacer that keeps the last row and the recalculate action scrollable clear of it (decision 9).
-- [ ] 8.5 Add the global `prefers-reduced-motion` block from decision 10.
+- [x] 8.1 Replace `src/index.css` with a reset and base layer, deleting the scaffold's `#root` 1126px column, `h1`/`h2` sizing, and `code`/`.counter` rules outright rather than overriding them (design.md Migration Plan).
+- [x] 8.2 Write `src/styles/tokens.css`: the complete light palette on bare `:root`, the dark overrides in both `@media (prefers-color-scheme: dark) :root:not([data-theme='light'])` and `:root[data-theme='dark']`, and the thirty priority values from decision 3. No color may be declared only inside a media or attribute block.
+- [x] 8.3 Write the per-component stylesheets consuming only those tokens: shell and header, tab bar, task row with its priority badge and duration chip, form fields and duration/priority chips, the creation sheet, the add-task control, the feedback region, group headings, and the empty state. Replace the icons with the inline SVG module from decision 14, keeping every `aria-label` intact.
+- [x] 8.4 Apply the responsive shell — full-bleed to a 480px centered cap with 16px gutters — plus the add-task control's `right: max(16px, calc(50% - 240px + 16px))` placement, its `env(safe-area-inset-bottom)` offset, and the 96px bottom spacer that keeps the last row and the recalculate action scrollable clear of it (decision 9).
+- [x] 8.5 Add the global `prefers-reduced-motion` block from decision 10.
 
 ## 9. Integration and verification
 

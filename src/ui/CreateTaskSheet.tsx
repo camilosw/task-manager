@@ -8,6 +8,8 @@ import {
 import type { CreateTaskResult } from '../domain/task'
 import type { CreateTaskFormInput } from './appStateContext'
 import { CreateTaskForm } from './CreateTaskForm'
+import { PlusIcon } from './icons'
+import './CreateTaskSheet.css'
 
 export type CreateTaskSheetProps = {
   createTask: (input: CreateTaskFormInput) => Promise<CreateTaskResult>
@@ -98,15 +100,17 @@ export function CreateTaskSheet({ createTask }: CreateTaskSheetProps) {
     <>
       <button
         type="button"
+        className="add-task-button"
         ref={triggerRef}
         onClick={openSheet}
         aria-label="Add a task"
       >
-        +
+        <PlusIcon />
       </button>
       {open && (
         <dialog
           ref={dialogRef}
+          className="create-task-sheet"
           onKeyDown={handleKeyDown}
           onClick={handleBackdropClick}
         >

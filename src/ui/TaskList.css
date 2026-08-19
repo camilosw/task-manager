@@ -1,0 +1,11 @@
+/**
+ * The <ul> shared by the Today, All and Completed tabs (see TaskItem.css
+ * for the rows themselves). `index.css`'s reset already strips list
+ * markers/margins from every `<ul>`; this file exists so the list has its
+ * own component stylesheet per design.md, decision 1, even though today it
+ * has nothing to add beyond that reset.
+ */
+
+.task-list {
+  display: block;
+}

@@ -1,0 +1,69 @@
+/**
+ * The persistent add-task control and the native <dialog> it opens
+ * (design.md, decisions 6 and 9; specs/task-management/spec.md, "Task
+ * creation is opened on demand from a persistent control").
+ */
+
+/* The floating add-task control stays glued to the responsive column, not
+   to the viewport edge, once the 480px cap engages (design.md, decision 9):
+   16px from the viewport edge while full-bleed, 16px inside the column's
+   right edge once centered. */
+.add-task-button {
+  position: fixed;
+  right: max(16px, calc(50% - 240px + 16px));
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 30;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.35);
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.add-task-button:hover {
+  filter: brightness(1.05);
+}
+
+.add-task-button:active {
+  transform: scale(0.92);
+}
+
+.add-task-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* The dialog itself is unstyled (and hidden by the platform's own
+   `dialog:not([open])` rule) until `[open]` is set by `showModal()` - the
+   selectors below only ever apply to the open state, so there is no
+   author-stylesheet rule fighting the native closed-by-default behavior
+   during the brief render before the mount effect calls `showModal()`. */
+.create-task-sheet {
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.create-task-sheet[open] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.create-task-sheet::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}

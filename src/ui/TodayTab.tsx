@@ -4,6 +4,7 @@ import type { EditTaskInput, EditTaskResult, Task } from '../domain/task'
 import { EmptyState } from './EmptyState'
 import { PRIORITY_LABELS } from './priorityLabels'
 import { TaskList } from './TaskList'
+import './TodayTab.css'
 
 export type TodayTabProps = {
   tasks: Task[]
@@ -55,8 +56,22 @@ export function TodayTab({
         <section
           key={group.priority}
           aria-label={PRIORITY_LABELS[group.priority]}
+          className="today-group"
         >
-          <h3>{PRIORITY_LABELS[group.priority]}</h3>
+          <div className="today-group__heading">
+            {/* A sibling of the heading, not a child of it, so the <h3>'s
+                own text is never anything but the plain level name (see
+                specs/task-views/spec.md, "A heading names its level in
+                text" - color reinforces, it never replaces the name). */}
+            <span
+              className="today-group__marker"
+              data-priority={group.priority}
+              aria-hidden="true"
+            />
+            <h3 className="today-group__title">
+              {PRIORITY_LABELS[group.priority]}
+            </h3>
+          </div>
           <TaskList
             tasks={group.tasks}
             onEdit={onEdit}

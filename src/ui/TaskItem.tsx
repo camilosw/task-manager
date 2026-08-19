@@ -8,6 +8,8 @@ import type {
 } from '../domain/task'
 import { PRIORITY_LABELS } from './priorityLabels'
 import { TaskForm, type TaskFormValues } from './TaskForm'
+import { EditIcon, TrashIcon } from './icons'
+import './TaskItem.css'
 
 export type TaskItemProps = {
   task: Task
@@ -71,7 +73,7 @@ export function TaskItem({
 
   if (isEditing) {
     return (
-      <li>
+      <li className="task-row task-row--editing">
         <TaskForm
           heading={`Edit "${task.name}"`}
           submitLabel="Save"
@@ -90,25 +92,46 @@ export function TaskItem({
   const isCompleted = task.completedAt !== null
 
   return (
-    <li>
+    <li className="task-row">
       <input
         type="checkbox"
+        className="task-row__checkbox"
         aria-labelledby={nameId}
         checked={isCompleted}
         disabled={isCompleted}
         onChange={() => onComplete(task.id)}
       />
-      <span id={nameId}>{isCompleted ? <s>{task.name}</s> : task.name}</span>
-      <span>{formatDuration(task.duration)}</span>
-      <span data-priority={task.priority}>
-        {PRIORITY_LABELS[task.priority]}
-      </span>
-      <button type="button" onClick={() => setIsEditing(true)}>
-        Edit
-      </button>
-      <button type="button" onClick={() => onDelete(task.id)}>
-        Delete
-      </button>
+      <div className="task-row__main">
+        <span id={nameId} className="task-row__name">
+          {isCompleted ? <s>{task.name}</s> : task.name}
+        </span>
+        <div className="task-row__meta">
+          <span className="task-row__duration">
+            {formatDuration(task.duration)}
+          </span>
+          <span className="task-row__priority" data-priority={task.priority}>
+            {PRIORITY_LABELS[task.priority]}
+          </span>
+        </div>
+      </div>
+      <div className="task-row__actions">
+        <button
+          type="button"
+          className="task-row__icon-button task-row__edit"
+          aria-label="Edit"
+          onClick={() => setIsEditing(true)}
+        >
+          <EditIcon />
+        </button>
+        <button
+          type="button"
+          className="task-row__icon-button task-row__delete"
+          aria-label="Delete"
+          onClick={() => onDelete(task.id)}
+        >
+          <TrashIcon />
+        </button>
+      </div>
     </li>
   )
 }

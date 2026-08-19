@@ -1,0 +1,207 @@
+/**
+ * The name/duration/priority form shared by task creation and inline
+ * editing (specs/task-management/spec.md, "Creating a task" and "Editing a
+ * task"). The bare `.task-form` rules are the shared chrome-free layout;
+ * the two contextual blocks at the bottom give it a different surrounding
+ * card depending on where it is mounted - inside a task row (`TaskItem.css`
+ * gives that `<li>` the `.task-row--editing` class) or inside the creation
+ * sheet's `<dialog>` (`CreateTaskSheet.css` gives it the
+ * `.create-task-sheet` class) - entirely through ancestor selectors, with
+ * no extra prop needed (design.md, decision 1).
+ */
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.task-form__heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.task-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-form__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.task-form__input {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+
+.task-form__input:hover {
+  border-color: var(--text-faint);
+}
+
+.task-form__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.task-form__fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.task-form__chip {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.task-form__chip:hover {
+  border-color: var(--text-faint);
+}
+
+.task-form__chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* The priority chips carry the same per-level color used on the task row
+   and on the Today group headings once selected (specs/appearance/spec.md,
+   "A level's color is the same everywhere it appears"). Unselected chips
+   stay neutral, matching the duration chips. */
+.task-form__chip--priority[aria-pressed='true'][data-priority='urgent'] {
+  border-color: var(--priority-urgent-marker);
+  background: var(--priority-urgent-bg);
+  color: var(--priority-urgent-fg);
+}
+.task-form__chip--priority[aria-pressed='true'][data-priority='high'] {
+  border-color: var(--priority-high-marker);
+  background: var(--priority-high-bg);
+  color: var(--priority-high-fg);
+}
+.task-form__chip--priority[aria-pressed='true'][data-priority='medium'] {
+  border-color: var(--priority-medium-marker);
+  background: var(--priority-medium-bg);
+  color: var(--priority-medium-fg);
+}
+.task-form__chip--priority[aria-pressed='true'][data-priority='low'] {
+  border-color: var(--priority-low-marker);
+  background: var(--priority-low-bg);
+  color: var(--priority-low-fg);
+}
+.task-form__chip--priority[aria-pressed='true'][data-priority='very-low'] {
+  border-color: var(--priority-very-low-marker);
+  background: var(--priority-very-low-bg);
+  color: var(--priority-very-low-fg);
+}
+
+.task-form__errors {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--danger);
+  background: color-mix(in oklch, var(--danger) 12%, transparent);
+}
+
+.task-form__error {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.task-form__error + .task-form__error {
+  margin-top: 4px;
+}
+
+.task-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.task-form__submit {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: filter 0.12s ease;
+}
+
+.task-form__submit:hover {
+  filter: brightness(1.06);
+}
+
+.task-form__submit:active {
+  transform: scale(0.98);
+}
+
+.task-form__cancel {
+  flex: 1;
+  padding: 11px 0;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.12s ease;
+}
+
+.task-form__cancel:hover {
+  border-color: var(--text-faint);
+}
+
+/* Context: an in-place edit card within a task row's <li>. */
+.task-row .task-form {
+  padding: 14px;
+  margin: 8px 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+/* Context: the creation sheet's content, inside its <dialog> (see
+   CreateTaskSheet.css for the dialog's own positioning). */
+.create-task-sheet .task-form {
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgb(0 0 0 / 0.25);
+  max-height: 86vh;
+  overflow-y: auto;
+}
