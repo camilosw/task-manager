@@ -181,7 +181,7 @@ describe('the plan stays fixed while the app remains in the foreground (10.3)', 
     const todaySection = screen.getByRole('region', { name: 'Today' })
     const item = within(todaySection).getByText('Planned task').closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
     await waitFor(() => {
       expect(within(todaySection).getByText('Planned task').tagName).toBe('S')
     })
@@ -241,7 +241,7 @@ describe('manual recalculation (10.4)', () => {
       .getByText('Will be completed')
       .closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
     await waitFor(() => {
       expect(within(todaySection).getByText('Will be completed').tagName).toBe(
         'S',
@@ -293,7 +293,7 @@ describe('urgent task admitted immediately (10.5)', () => {
       .getByText('Fix production outage')
       .closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
 
     const struck = await within(todaySection).findByText(
       'Fix production outage',
@@ -334,7 +334,7 @@ describe('reload persistence (10.6)', () => {
       .getByText('Ship the release')
       .closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
     await waitFor(() => {
       expect(within(todaySection).getByText('Ship the release').tagName).toBe(
         'S',

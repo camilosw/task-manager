@@ -342,7 +342,7 @@ describe('action feedback follows every completed action (4.3)', () => {
 
     const item = (await screen.findByText('Wash dishes')).closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
 
     expect(await screen.findByText('Task completed')).toBeTruthy()
   })
@@ -401,7 +401,7 @@ describe('the confirmation is identical from every tab (4.4)', () => {
     switchTab('Today')
     const todayItem = (await screen.findByText('From today')).closest('li')
     if (!todayItem) throw new Error('expected a list item')
-    fireEvent.click(within(todayItem).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(todayItem).getByRole('checkbox'))
 
     expect(await screen.findByText('Task completed')).toBeTruthy()
     expect(
@@ -411,7 +411,7 @@ describe('the confirmation is identical from every tab (4.4)', () => {
     switchTab('All')
     const allItem = (await screen.findByText('From all')).closest('li')
     if (!allItem) throw new Error('expected a list item')
-    fireEvent.click(within(allItem).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(allItem).getByRole('checkbox'))
 
     // Exactly the same message as from Today, and the All tab - not Today
     // - is still the tab in view.
@@ -421,38 +421,45 @@ describe('the confirmation is identical from every tab (4.4)', () => {
     ).toBeTruthy()
   })
 
-  it('never moves focus onto the feedback region when completing via the keyboard', async () => {
+  it('leaves focus on the checkbox when completing via the keyboard', async () => {
     renderApp()
     await waitForLoaded()
     switchTab('All')
-    createTaskViaForm('Keyboard task', '15m', 'Medium')
+    // Urgent tasks are admitted to today's plan unconditionally, so this
+    // one is reachable from Today right after creation. That matters here:
+    // unlike the All tab, which drops a task from its list the moment it is
+    // completed, the Today tab keeps a completed task's row mounted in
+    // place, struck through (see specs/task-views/spec.md, "Completing a
+    // task from the Today tab keeps it visible") - the row staying put is
+    // exactly what lets focus stay on its checkbox instead of the row (and
+    // the focused element within it) disappearing out from under it.
+    createTaskViaForm('Keyboard task', '15m', 'Urgent')
 
+    switchTab('Today')
     const item = (await screen.findByText('Keyboard task')).closest('li')
     if (!item) throw new Error('expected a list item')
-    const completeButton = within(item).getByRole('button', {
-      name: 'Complete',
-    })
-    completeButton.focus()
-    expect(document.activeElement).toBe(completeButton)
+    const checkbox = within(item).getByRole('checkbox')
+    checkbox.focus()
+    expect(document.activeElement).toBe(checkbox)
 
-    fireEvent.click(completeButton)
+    fireEvent.click(checkbox)
 
     const status = await screen.findByText('Task completed')
     // The confirmation must never be the thing that receives focus (see
     // specs/action-feedback/spec.md, "The confirmation reaches assistive
-    // technology without stealing focus"). This is the part of "Focus stays
-    // where the user left it" that this section's wiring owns and can pin
-    // today. It cannot yet assert that focus stays *on* the "Complete"
-    // button itself: `TaskItem`'s conditional `{!isCompleted && <button>}`
-    // (pre-existing, unrelated to this section) unmounts that button
-    // synchronously the instant `AppStateProvider.completeTask` dispatches
-    // - before this wrapper's own `feedback.show` call even runs - so
-    // jsdom moves `document.activeElement` to `<body>` regardless of
-    // anything this section does. That half of the scenario becomes
-    // reachable in section 6, once the checkbox (which stays in place,
-    // merely toggling checked/disabled, per design.md decision 8) replaces
-    // this vanishing button.
+    // technology without stealing focus").
     expect(document.activeElement).not.toBe(status)
+    // Section 6 replaced the vanishing "Complete" button with a checkbox
+    // that stays mounted across the pending -> completed transition, merely
+    // toggling checked/disabled in place (design.md, decision 8). That is
+    // what makes the rest of "Focus stays where the user left it" testable:
+    // completing from the keyboard now leaves focus exactly where the user
+    // left it, on the checkbox itself - previously untestable here because
+    // the old button unmounted synchronously the instant
+    // `AppStateProvider.completeTask` dispatched, moving
+    // `document.activeElement` to `<body>` regardless of anything this
+    // section's wiring did.
+    expect(document.activeElement).toBe(checkbox)
   })
 })
 

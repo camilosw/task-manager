@@ -288,7 +288,7 @@ describe('completing a task (9.5, 9.6)', () => {
       .getByText('Finish the report')
       .closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
 
     const struck = await within(todaySection).findByText('Finish the report')
     expect(struck.tagName).toBe('S')
@@ -319,7 +319,7 @@ describe('completing a task (9.5, 9.6)', () => {
     const allSection = screen.getByRole('region', { name: 'All tasks' })
     const item = within(allSection).getByText('Not planned task').closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
 
     await within(allSection).findByText('empty')
     expect(within(allSection).queryByText('Not planned task')).toBeNull()
@@ -350,7 +350,7 @@ describe('completing a task (9.5, 9.6)', () => {
     const allSection = screen.getByRole('region', { name: 'All tasks' })
     const item = within(allSection).getByText('Planned task').closest('li')
     if (!item) throw new Error('expected a list item')
-    fireEvent.click(within(item).getByRole('button', { name: 'Complete' }))
+    fireEvent.click(within(item).getByRole('checkbox'))
 
     await within(allSection).findByText('empty')
     expect(within(allSection).queryByText('Planned task')).toBeNull()
@@ -438,5 +438,159 @@ describe('empty states (9.8)', () => {
       name: 'Completed tasks',
     })
     expect(within(completedSection).getByText('empty')).toBeTruthy()
+  })
+})
+
+describe('the checkbox in each tab (6.2)', () => {
+  it('shows a pending and a completed row side by side in Today, and the right state in every row of All and Completed', async () => {
+    const pendingPlanned = makeTask({
+      id: 'pending-planned',
+      name: 'Pending planned',
+      priority: 'medium',
+    })
+    const completedPlanned = makeTask({
+      id: 'completed-planned',
+      name: 'Completed today',
+      priority: 'medium',
+      completedAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+    const pendingNotPlanned = makeTask({
+      id: 'pending-not-planned',
+      name: 'Pending not planned',
+      priority: 'high',
+    })
+    const completedElsewhere = makeTask({
+      id: 'completed-elsewhere',
+      name: 'Completed elsewhere',
+      priority: 'low',
+      completedAt: new Date('2026-08-17T12:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([
+      pendingPlanned,
+      completedPlanned,
+      pendingNotPlanned,
+      completedElsewhere,
+    ])
+    // Both `pendingPlanned` and `completedPlanned` are frozen into today's
+    // plan, so completing the latter kept it visible there (see
+    // specs/task-views/spec.md, "Completing a task from the Today tab keeps
+    // it visible") - this is what puts a pending and a completed row side
+    // by side in Today.
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [pendingPlanned.id, completedPlanned.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const pendingCheckbox = within(todaySection).getByRole('checkbox', {
+      name: 'Pending planned',
+    }) as HTMLInputElement
+    const completedCheckbox = within(todaySection).getByRole('checkbox', {
+      name: 'Completed today',
+    }) as HTMLInputElement
+    expect(pendingCheckbox.checked).toBe(false)
+    expect(pendingCheckbox.disabled).toBe(false)
+    expect(completedCheckbox.checked).toBe(true)
+    expect(completedCheckbox.disabled).toBe(true)
+
+    switchTab('All')
+    // The All tab lists only pending tasks, so every checkbox there is
+    // unchecked and interactive.
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const allCheckboxes = within(allSection).getAllByRole(
+      'checkbox',
+    ) as HTMLInputElement[]
+    expect(allCheckboxes).toHaveLength(2)
+    allCheckboxes.forEach((checkbox) => {
+      expect(checkbox.checked).toBe(false)
+      expect(checkbox.disabled).toBe(false)
+    })
+
+    switchTab('Completed')
+    // The Completed tab lists only completed tasks, so every checkbox
+    // there is checked and not interactive.
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    const completedCheckboxes = within(completedSection).getAllByRole(
+      'checkbox',
+    ) as HTMLInputElement[]
+    expect(completedCheckboxes).toHaveLength(2)
+    completedCheckboxes.forEach((checkbox) => {
+      expect(checkbox.checked).toBe(true)
+      expect(checkbox.disabled).toBe(true)
+    })
+  })
+})
+
+describe('edit and delete controls are present in every tab (6.4)', () => {
+  it('offers named Edit and Delete controls on every row in Today, All and Completed', async () => {
+    const planned = makeTask({
+      id: 'planned',
+      name: 'Planned task',
+      priority: 'medium',
+    })
+    const pendingOther = makeTask({
+      id: 'pending-other',
+      name: 'Other pending task',
+      priority: 'high',
+    })
+    const completed = makeTask({
+      id: 'completed',
+      name: 'Completed task',
+      priority: 'low',
+      completedAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([planned, pendingOther, completed])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [planned.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const todayItem = within(todaySection)
+      .getByText('Planned task')
+      .closest('li')
+    if (!todayItem) throw new Error('expected a list item')
+    expect(within(todayItem).getByRole('button', { name: 'Edit' })).toBeTruthy()
+    expect(
+      within(todayItem).getByRole('button', { name: 'Delete' }),
+    ).toBeTruthy()
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    for (const name of ['Planned task', 'Other pending task']) {
+      const item = within(allSection).getByText(name).closest('li')
+      if (!item) throw new Error('expected a list item')
+      expect(within(item).getByRole('button', { name: 'Edit' })).toBeTruthy()
+      expect(within(item).getByRole('button', { name: 'Delete' })).toBeTruthy()
+    }
+
+    switchTab('Completed')
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    const completedItem = within(completedSection)
+      .getByText('Completed task')
+      .closest('li')
+    if (!completedItem) throw new Error('expected a list item')
+    expect(
+      within(completedItem).getByRole('button', { name: 'Edit' }),
+    ).toBeTruthy()
+    expect(
+      within(completedItem).getByRole('button', { name: 'Delete' }),
+    ).toBeTruthy()
   })
 })

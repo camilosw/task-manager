@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { formatDuration } from '../domain/duration'
 import type {
   EditTaskInput,
@@ -27,12 +27,19 @@ export type TaskItemProps = {
  *
  * Name, duration and an identifiable priority are always visible (see
  * specs/task-views/spec.md, "Every task display shows name, duration, and
- * priority"). Once completed, the name renders inside `<s>` and the
- * "Complete" action disappears, but the row otherwise stays in place — this
- * is what lets a task completed from the Today tab remain visible there,
- * struck through, until the plan is next recomputed (see
- * specs/task-views/spec.md, "Completing a task from the Today tab keeps it
- * visible").
+ * priority"). Completion is driven by a checkbox that persists across the
+ * pending -> completed transition rather than a button that disappears:
+ * unchecked and interactive while pending, checked and `disabled` once
+ * completed, so completion cannot be undone by unchecking it (see
+ * specs/task-management/spec.md, "A pending task is completed through a
+ * checkbox on its row", and design.md, decision 8). The checkbox's
+ * accessible name comes from `aria-labelledby` pointing at this row's own
+ * name element, rather than a second copy of the name string that could
+ * drift after an edit. Once completed, the name renders inside `<s>`, but
+ * the row otherwise stays in place — this is what lets a task completed
+ * from the Today tab remain visible there, struck through, until the plan
+ * is next recomputed (see specs/task-views/spec.md, "Completing a task from
+ * the Today tab keeps it visible").
  */
 export function TaskItem({
   task,
@@ -41,6 +48,7 @@ export function TaskItem({
   onComplete,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const nameId = useId()
 
   async function handleEditSubmit(values: TaskFormValues) {
     if (values.duration === undefined || values.priority === undefined) {
@@ -83,16 +91,18 @@ export function TaskItem({
 
   return (
     <li>
-      <span>{isCompleted ? <s>{task.name}</s> : task.name}</span>
+      <input
+        type="checkbox"
+        aria-labelledby={nameId}
+        checked={isCompleted}
+        disabled={isCompleted}
+        onChange={() => onComplete(task.id)}
+      />
+      <span id={nameId}>{isCompleted ? <s>{task.name}</s> : task.name}</span>
       <span>{formatDuration(task.duration)}</span>
       <span data-priority={task.priority}>
         {PRIORITY_LABELS[task.priority]}
       </span>
-      {!isCompleted && (
-        <button type="button" onClick={() => onComplete(task.id)}>
-          Complete
-        </button>
-      )}
       <button type="button" onClick={() => setIsEditing(true)}>
         Edit
       </button>
