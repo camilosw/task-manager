@@ -5,6 +5,47 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Task Manager</title>
+    <!--
+      Pairs with the theme-color meta tag below (design.md, decision 12):
+      this script sets `data-theme` before first paint so the correct
+      palette in src/styles/tokens.css already applies when the document
+      renders, and src/ui/ThemeProvider.tsx finds and updates the static
+      meta tag in place once React mounts, rather than appending a
+      duplicate.
+
+      Reads the same `localStorage` key as `THEME_STORAGE_KEY` in
+      src/ui/themeStorage.ts, duplicated here as a literal because this
+      script must run synchronously, before any module script loads, and
+      cannot import that module (design.md, decision 4 and the "inline
+      anti-flash script duplicates the storage key" risk). If that key ever
+      changes, update the literal here too.
+
+      Deliberately an inline, blocking, non-module script — a deferred or
+      module script would run after first paint, which is the flash this
+      exists to avoid.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('task-manager:theme')
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.setAttribute('data-theme', stored)
+          }
+        } catch (e) {
+          // localStorage can throw (Safari private mode, storage
+          // disabled). Falling through leaves data-theme unset, i.e. the
+          // system preference decides — the same fallback themeStorage.ts
+          // uses.
+        }
+      })()
+    </script>
+    <!-- Static default: the light --bg token (src/styles/tokens.css).
+         src/ui/ThemeProvider.tsx finds this tag and keeps its `content` in
+         sync with the resolved theme once it mounts (design.md, decision
+         12: one meta tag, not two media-scoped ones, so an explicit choice
+         can disagree with the system preference and still control the
+         browser chrome). -->
+    <meta name="theme-color" content="oklch(0.985 0.003 250)" />
   </head>
   <body>
     <div id="root"></div>

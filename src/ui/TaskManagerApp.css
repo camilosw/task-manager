@@ -41,6 +41,17 @@
    ever being removed from the DOM. `pointer-events: none` keeps it from
    ever intercepting a tap even while a message is showing, matching "Work
    continues while a confirmation is visible". */
+/* The confirmation's entrance (design.md, decision 10). The element itself
+   is never inserted or removed - its text changes in place (decision 7,
+   for reliable live-region announcement) - so what animates is `opacity`
+   between the `:empty` and `:not(:empty)` states below, not the element's
+   presence. That is also why a `transition` is the right tool here and a
+   keyframe `animation` (as used for the sheet, above) is not: a second
+   `show()` call while a message is already visible replaces the text but
+   leaves the element matching `:not(:empty)` throughout, so `opacity`
+   never leaves `1` and the transition never re-fires - correctly matching
+   "a second action replaces the first confirmation" rather than
+   re-animating on every replacement. */
 .app__feedback {
   position: fixed;
   left: 50%;
@@ -50,6 +61,8 @@
   max-width: calc(100% - 32px);
   text-align: center;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
 
 .app__feedback:not(:empty) {
@@ -61,6 +74,7 @@
   font-size: 12.5px;
   font-weight: 600;
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  opacity: 1;
 }
 
 .app__tabs {

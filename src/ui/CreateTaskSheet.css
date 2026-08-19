@@ -54,6 +54,28 @@
   max-height: 100%;
 }
 
+/* The sheet's entrance (design.md, decision 10: transitions are "confined
+   to the sheet's entrance, the confirmation's entrance, and control
+   hover/active states"). `showModal()` is called imperatively from a React
+   effect (decision 6), not from a CSS state change the element transitions
+   between, so a `[open]`-keyed `animation` is the fit here rather than a
+   `transition`, which needs two authored states either side of a change to
+   interpolate. `::backdrop` isn't a descendant of the dialog box, so it
+   isn't carried along by this animation - it appears immediately, which
+   reads correctly as the dimming layer under a sheet that slides up.
+   `prefers-reduced-motion` (src/index.css) already collapses this to
+   0.01ms because that rule targets every element's `animation-duration`. */
+@keyframes create-task-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .create-task-sheet[open] {
   position: fixed;
   inset: 0;
@@ -62,6 +84,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  animation: create-task-sheet-in 0.18s ease;
 }
 
 .create-task-sheet::backdrop {

@@ -291,6 +291,31 @@ describe('theme toggle in the header (3.4)', () => {
     ).toBeTruthy()
     expect(screen.getByRole('region', { name: 'All tasks' })).toBeTruthy()
   })
+
+  it('switching the theme preserves the current context: the All tab, the open sheet, and the entered name (9.2)', async () => {
+    renderThemedApp()
+    await waitForLoaded()
+    switchTab('All')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Partially typed name' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: THEME_TOGGLE_NAME }))
+
+    expect(
+      screen.getByRole('button', { name: 'All', pressed: true }),
+    ).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'All tasks' })).toBeTruthy()
+    // The sheet is still open, and its draft survived the theme switch
+    // rather than being remounted fresh (see CreateTaskSheet.tsx: the form
+    // is mounted only while `open`, so a remount would have discarded it).
+    expect(screen.getByRole('button', { name: 'Add task' })).toBeTruthy()
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe(
+      'Partially typed name',
+    )
+  })
 })
 
 describe('the feedback region is always mounted (4.2)', () => {

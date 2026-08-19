@@ -19,7 +19,12 @@ export default defineConfig({
         short_name: 'Task Manager',
         description:
           'A personal task manager built around a bounded, frozen daily plan.',
-        theme_color: '#1E1B4B',
+        // The light `--bg` token (src/styles/tokens.css), matching the
+        // static <meta name="theme-color"> default in index.html: a
+        // manifest value is fixed at install time and cannot vary with the
+        // user's theme choice, so it uses the light theme as the default
+        // (design.md, decision 12).
+        theme_color: 'oklch(0.985 0.003 250)',
         background_color: '#1E1B4B',
         display: 'standalone',
         start_url: '/',
