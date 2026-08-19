@@ -529,6 +529,181 @@ describe('the checkbox in each tab (6.2)', () => {
   })
 })
 
+describe('duration and priority are separately identifiable (7.1)', () => {
+  it('shows "45m" and "Urgent" as elements separate from the name, in Today, All and Completed, and still visible - unstruck - on a completed task', async () => {
+    const todayPending = makeTask({
+      id: 'today-pending',
+      name: 'Today pending urgent',
+      duration: 45,
+      priority: 'urgent',
+    })
+    const todayCompleted = makeTask({
+      id: 'today-completed',
+      name: 'Today completed urgent',
+      duration: 45,
+      priority: 'urgent',
+      completedAt: new Date('2026-08-18T08:00:00.000Z'),
+    })
+    const allOnly = makeTask({
+      id: 'all-only',
+      name: 'All only urgent',
+      duration: 45,
+      priority: 'urgent',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([todayPending, todayCompleted, allOnly])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [todayPending.id, todayCompleted.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+
+    const pendingItem = within(todaySection)
+      .getByText('Today pending urgent')
+      .closest('li')
+    if (!pendingItem) throw new Error('expected a list item')
+    const pendingName = within(pendingItem).getByText('Today pending urgent')
+    const pendingDuration = within(pendingItem).getByText('45m')
+    const pendingPriority = within(pendingItem).getByText('Urgent')
+    // Each is its own element: the name element carries none of the other
+    // two strings, and duration/priority are independently queryable.
+    expect(pendingName).not.toBe(pendingDuration)
+    expect(pendingName).not.toBe(pendingPriority)
+    expect(pendingName.textContent).toBe('Today pending urgent')
+    expect(pendingDuration.textContent).toBe('45m')
+    expect(pendingPriority.textContent).toBe('Urgent')
+
+    const completedItem = within(todaySection)
+      .getByText('Today completed urgent')
+      .closest('li')
+    if (!completedItem) throw new Error('expected a list item')
+    const struckName = within(completedItem).getByText('Today completed urgent')
+    expect(struckName.tagName).toBe('S')
+    const completedDuration = within(completedItem).getByText('45m')
+    const completedPriority = within(completedItem).getByText('Urgent')
+    // The strike-through applies to the name only - duration and priority
+    // stay outside it and legible (specs/task-views/spec.md, "A completed
+    // task still shows its duration and priority").
+    expect(completedDuration.closest('s')).toBeNull()
+    expect(completedPriority.closest('s')).toBeNull()
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const allItem = within(allSection)
+      .getByText('All only urgent')
+      .closest('li')
+    if (!allItem) throw new Error('expected a list item')
+    expect(within(allItem).getByText('45m')).toBeTruthy()
+    expect(within(allItem).getByText('Urgent')).toBeTruthy()
+
+    switchTab('Completed')
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    const completedTabItem = within(completedSection)
+      .getByText('Today completed urgent')
+      .closest('li')
+    if (!completedTabItem) throw new Error('expected a list item')
+    expect(within(completedTabItem).getByText('45m')).toBeTruthy()
+    expect(within(completedTabItem).getByText('Urgent')).toBeTruthy()
+  })
+})
+
+describe('a heading names its level in text (7.2)', () => {
+  it('reads "Very low" for a Today group of very-low tasks, identifiable without color', async () => {
+    const veryLow = makeTask({
+      id: 'very-low-task',
+      name: 'Very low task',
+      priority: 'very-low',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([veryLow])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [veryLow.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const heading = screen.getByRole('heading', {
+      level: 3,
+      name: 'Very low',
+    })
+    // The heading's own text, not an aria-label standing in for it, is what
+    // names the level - so it reads correctly with color disregarded.
+    expect(heading.textContent).toBe('Very low')
+  })
+})
+
+describe('"Recalculate today" sits after the groups (7.3)', () => {
+  it('appears after the last priority group rather than above the first', async () => {
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+    })
+    const low = makeTask({ id: 'low-1', name: 'Low task', priority: 'low' })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgent, low])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [urgent.id, low.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const orderedNodes = Array.from(todaySection.querySelectorAll('h3, button'))
+    const recalculateIndex = orderedNodes.findIndex(
+      (node) => node.textContent === 'Recalculate today',
+    )
+    const lastHeadingIndex = orderedNodes.reduce(
+      (last, node, index) => (node.tagName === 'H3' ? index : last),
+      -1,
+    )
+    expect(lastHeadingIndex).toBeGreaterThan(-1)
+    expect(recalculateIndex).toBeGreaterThan(lastHeadingIndex)
+  })
+
+  it('is still available when the Today tab shows its empty state', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    expect(within(todaySection).getByText('empty')).toBeTruthy()
+    expect(
+      within(todaySection).getByRole('button', { name: 'Recalculate today' }),
+    ).toBeTruthy()
+  })
+
+  it('is absent from the All and Completed tabs', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    switchTab('All')
+    expect(
+      screen.queryByRole('button', { name: 'Recalculate today' }),
+    ).toBeNull()
+
+    switchTab('Completed')
+    expect(
+      screen.queryByRole('button', { name: 'Recalculate today' }),
+    ).toBeNull()
+  })
+})
+
 describe('edit and delete controls are present in every tab (6.4)', () => {
   it('offers named Edit and Delete controls on every row in Today, All and Completed', async () => {
     const planned = makeTask({

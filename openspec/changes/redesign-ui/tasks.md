@@ -44,9 +44,9 @@
 
 ## 7. What a task row and the Today tab show
 
-- [ ] 7.1 Test first: a 45-minute Urgent task renders "45m" and "Urgent" as two separate elements, neither readable only as part of the name, in all three tabs — and a completed task still shows both. Pins task-views "Duration and priority are separately identifiable", "Priority survives the removal of color", and "A completed task still shows its duration and priority".
-- [ ] 7.2 Test first: a Today group of very-low tasks has a heading reading "Very low" as text, identifiable without its color. Pins task-views "A heading names its level in text".
-- [ ] 7.3 Test first: "Recalculate today" appears after the last priority group rather than above the first, is still available when the Today tab shows its empty state, and is absent from the All and Completed tabs. Pins the modified "Recalculate today is available from the Today tab" — the action moves from its current position above the groups.
+- [x] 7.1 Test first: a 45-minute Urgent task renders "45m" and "Urgent" as two separate elements, neither readable only as part of the name, in all three tabs — and a completed task still shows both. Pins task-views "Duration and priority are separately identifiable", "Priority survives the removal of color", and "A completed task still shows its duration and priority".
+- [x] 7.2 Test first: a Today group of very-low tasks has a heading reading "Very low" as text, identifiable without its color. Pins task-views "A heading names its level in text".
+- [x] 7.3 Test first: "Recalculate today" appears after the last priority group rather than above the first, is still available when the Today tab shows its empty state, and is absent from the All and Completed tabs. Pins the modified "Recalculate today is available from the Today tab" — the action moves from its current position above the groups.
 
 ## 8. Stylesheets
 

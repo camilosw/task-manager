@@ -148,9 +148,6 @@ export function TaskManagerApp() {
       {activeTab === 'today' && (
         <section aria-label="Today">
           <h2>Today</h2>
-          <button type="button" onClick={() => handleRecalculateToday()}>
-            Recalculate today
-          </button>
           <TodayTab
             tasks={state.tasks}
             snapshot={state.snapshot}
@@ -158,6 +155,15 @@ export function TaskManagerApp() {
             onDelete={handleDelete}
             onComplete={handleComplete}
           />
+          {/* Positioned after the priority groups (and after the empty
+              state) rather than above them (see specs/task-views/spec.md,
+              "Recalculate today is available from the Today tab" — "The
+              action sits below the groups"), while staying present even
+              when there is nothing to group ("The action is available on an
+              empty plan"). */}
+          <button type="button" onClick={() => handleRecalculateToday()}>
+            Recalculate today
+          </button>
         </section>
       )}
 
