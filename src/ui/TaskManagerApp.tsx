@@ -3,7 +3,7 @@ import { compareForSelection } from '../domain/dailyPlan'
 import type { CreateTaskResult } from '../domain/task'
 import { useAppState } from './useAppState'
 import type { AppState, CreateTaskFormInput } from './appStateContext'
-import { CreateTaskForm } from './CreateTaskForm'
+import { CreateTaskSheet } from './CreateTaskSheet'
 import { TaskList } from './TaskList'
 import { TodayTab } from './TodayTab'
 import { ThemeToggle } from './ThemeToggle'
@@ -33,9 +33,14 @@ function assertLoaded(
 
 /**
  * The application's root content once wrapped in `AppStateProvider`: the
- * task creation form, always visible, above the three tabs the main screen
- * presents — Today, All and Completed (see specs/task-views/spec.md,
- * "Three tabs"). Today is the tab shown when the application opens.
+ * persistent add-task control (`CreateTaskSheet`), above the three tabs the
+ * main screen presents — Today, All and Completed (see
+ * specs/task-views/spec.md, "Three tabs"). Today is the tab shown when the
+ * application opens. The control is rendered once, outside the
+ * tab-conditional sections below, so it is identical on every tab and
+ * opening it never changes which tab is in view (see
+ * specs/task-management/spec.md, "Task creation is opened on demand from a
+ * persistent control").
  *
  * Only the active tab's panel is rendered. Grouping, ordering and
  * filtering are all derived here on every render rather than stored (see
@@ -125,7 +130,7 @@ export function TaskManagerApp() {
         {feedback.message}
       </p>
 
-      <CreateTaskForm createTask={handleCreateTask} />
+      <CreateTaskSheet createTask={handleCreateTask} />
 
       <nav aria-label="Task views">
         {TABS.map((tab) => (

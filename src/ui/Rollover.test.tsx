@@ -32,19 +32,23 @@ function renderApp(repository: Repository, now: () => Date) {
   )
 }
 
-/** Waits for the initial load to finish. */
+/** Waits for the initial load to finish. The create form now lives behind
+ * the add-task control rather than always on screen (see design.md,
+ * decision 6), so this anchors on that control instead of the "Name"
+ * field it used to resolve on. */
 async function waitForLoaded() {
-  await screen.findByLabelText('Name')
+  await screen.findByRole('button', { name: 'Add a task' })
 }
 
-/** Fills in and submits the (top-level) create form. Available regardless
- * of which tab is active, since the create form is always rendered above
- * the tabs. */
+/** Opens the creation sheet and submits the form. Available regardless of
+ * which tab is active, since the add-task control is rendered above the
+ * tabs on every one of them. */
 function createTaskViaForm(
   name: string,
   durationLabel: string,
   priorityLabel: string,
 ) {
+  fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
   fireEvent.change(screen.getByLabelText('Name'), {
     target: { value: name },
   })
@@ -183,10 +187,14 @@ describe('the plan stays fixed while the app remains in the foreground (10.3)', 
     })
 
     createTaskViaForm('New non-urgent task', '15m', 'Low')
-    await waitFor(() => {
-      // The create form clears its name field on a successful submission —
-      // proof the task was created — while the plan stays put.
-      expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('')
+    await waitFor(async () => {
+      // The creation sheet closes on a successful submission (see
+      // specs/task-management/spec.md, "A successful creation closes the
+      // form") - proof the task was created - while the plan stays put.
+      const persisted = await repository.loadAll()
+      expect(
+        persisted.tasks.some((task) => task.name === 'New non-urgent task'),
+      ).toBe(true)
     })
 
     expect(within(todaySection).queryByText('New non-urgent task')).toBeNull()
@@ -241,8 +249,11 @@ describe('manual recalculation (10.4)', () => {
     })
 
     createTaskViaForm('Newly eligible', '15m', 'Low')
-    await waitFor(() => {
-      expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('')
+    await waitFor(async () => {
+      const persisted = await repository.loadAll()
+      expect(
+        persisted.tasks.some((task) => task.name === 'Newly eligible'),
+      ).toBe(true)
     })
     expect(within(todaySection).queryByText('Newly eligible')).toBeNull()
 

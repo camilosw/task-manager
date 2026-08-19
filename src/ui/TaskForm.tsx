@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { DURATIONS, formatDuration, type Duration } from '../domain/duration'
 import { PRIORITIES, type Priority } from '../domain/priority'
 import type { TaskValidationField } from '../domain/task'
@@ -29,6 +29,14 @@ export type TaskFormProps = {
   initialValues?: TaskFormValues
   onSubmit: (values: TaskFormValues) => Promise<TaskFormSubmitResult>
   onCancel?: () => void
+  /** Moves keyboard focus onto the name field once, on mount. Used by
+   * `CreateTaskSheet` (see design.md, decision 6): the creation form is
+   * unmounted and remounted fresh each time the sheet opens, so "focus
+   * moves into the form on open" falls out of an effect that runs on
+   * mount, rather than needing to be driven from outside. Left `undefined`
+   * for the in-place edit form in `TaskItem`, which has no such
+   * requirement. */
+  autoFocus?: boolean
 }
 
 /**
@@ -48,8 +56,10 @@ export function TaskForm({
   initialValues,
   onSubmit,
   onCancel,
+  autoFocus,
 }: TaskFormProps) {
   const nameId = useId()
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(initialValues?.name ?? '')
   const [duration, setDuration] = useState<Duration | undefined>(
     initialValues?.duration,
@@ -58,6 +68,16 @@ export function TaskForm({
     initialValues?.priority,
   )
   const [errors, setErrors] = useState<TaskValidationField[]>([])
+
+  useEffect(() => {
+    if (autoFocus) {
+      nameInputRef.current?.focus()
+    }
+    // Intentionally runs once, on mount only: a fresh mount is exactly the
+    // "opened" moment this exists to catch (see the `autoFocus` prop doc
+    // above), and re-focusing on every keystroke would fight the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -84,6 +104,7 @@ export function TaskForm({
 
       <label htmlFor={nameId}>Name</label>
       <input
+        ref={nameInputRef}
         id={nameId}
         type="text"
         value={name}

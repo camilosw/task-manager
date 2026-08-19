@@ -28,9 +28,12 @@ function renderApp(repository: Repository = createInMemoryRepository()) {
   )
 }
 
-/** Waits for the initial load to finish. */
+/** Waits for the initial load to finish. The create form now lives behind
+ * the add-task control rather than always on screen (see design.md,
+ * decision 6), so this anchors on that control instead of the "Name"
+ * field it used to resolve on. */
 async function waitForLoaded() {
-  await screen.findByLabelText('Name')
+  await screen.findByRole('button', { name: 'Add a task' })
 }
 
 function switchTab(name: 'Today' | 'All' | 'Completed') {

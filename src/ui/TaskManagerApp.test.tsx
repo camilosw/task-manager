@@ -22,14 +22,12 @@ function renderApp(repository: Repository = createInMemoryRepository()) {
   )
 }
 
-/** Waits for the initial load to finish and returns the create form's
- * duration and priority groups, which every test needs. */
+/** Waits for the initial load to finish. The create form now lives behind
+ * the add-task control rather than always on screen (see design.md,
+ * decision 6), so this anchors on that control instead of the "Name"
+ * field it used to resolve on. */
 async function waitForLoaded() {
-  await screen.findByLabelText('Name')
-  return {
-    durationGroup: screen.getByRole('group', { name: 'Duration' }),
-    priorityGroup: screen.getByRole('group', { name: 'Priority' }),
-  }
+  await screen.findByRole('button', { name: 'Add a task' })
 }
 
 /** Switches to the named tab (see tasks.md section 9, which introduces the
@@ -39,12 +37,23 @@ function switchTab(name: 'Today' | 'All' | 'Completed') {
   fireEvent.click(screen.getByRole('button', { name }))
 }
 
-/** Fills in and submits the (top-level) create form. */
+/** Opens the creation sheet from the add-task control and returns its
+ * duration and priority groups, which several tests need directly. */
+function openCreateForm() {
+  fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
+  return {
+    durationGroup: screen.getByRole('group', { name: 'Duration' }),
+    priorityGroup: screen.getByRole('group', { name: 'Priority' }),
+  }
+}
+
+/** Opens the creation sheet, fills in and submits the form. */
 function createTaskViaForm(
   name: string,
   durationLabel: string,
   priorityLabel: string,
 ) {
+  fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
   fireEvent.change(screen.getByLabelText('Name'), {
     target: { value: name },
   })
@@ -66,7 +75,8 @@ function createTaskViaForm(
 describe('creating a task (8.1)', () => {
   it('offers exactly nine duration buttons and five priority choices', async () => {
     renderApp()
-    const { durationGroup, priorityGroup } = await waitForLoaded()
+    await waitForLoaded()
+    const { durationGroup, priorityGroup } = openCreateForm()
 
     const durationButtons = within(durationGroup).getAllByRole('button')
     expect(durationButtons).toHaveLength(9)
@@ -104,8 +114,9 @@ describe('creating a task (8.1)', () => {
 describe('validating the create form (8.2)', () => {
   it('rejects a blank name with a visible message and creates no task', async () => {
     renderApp()
-    const { durationGroup, priorityGroup } = await waitForLoaded()
+    await waitForLoaded()
     switchTab('All')
+    const { durationGroup, priorityGroup } = openCreateForm()
 
     fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
     fireEvent.click(
@@ -120,8 +131,9 @@ describe('validating the create form (8.2)', () => {
 
   it('rejects a missing duration with a message naming duration', async () => {
     renderApp()
-    const { priorityGroup } = await waitForLoaded()
+    await waitForLoaded()
     switchTab('All')
+    const { priorityGroup } = openCreateForm()
 
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Buy milk' },
@@ -136,8 +148,9 @@ describe('validating the create form (8.2)', () => {
 
   it('rejects a missing priority with a message naming priority', async () => {
     renderApp()
-    const { durationGroup } = await waitForLoaded()
+    await waitForLoaded()
     switchTab('All')
+    const { durationGroup } = openCreateForm()
 
     fireEvent.change(screen.getByLabelText('Name'), {
       target: { value: 'Buy milk' },
@@ -358,8 +371,9 @@ describe('action feedback follows every completed action (4.3)', () => {
 
   it('shows the validation message, and not "Task added", for a creation rejected for a blank name', async () => {
     renderApp()
-    const { durationGroup, priorityGroup } = await waitForLoaded()
+    await waitForLoaded()
     switchTab('All')
+    const { durationGroup, priorityGroup } = openCreateForm()
 
     fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
     fireEvent.click(
@@ -439,5 +453,181 @@ describe('the confirmation is identical from every tab (4.4)', () => {
     // merely toggling checked/disabled, per design.md decision 8) replaces
     // this vanishing button.
     expect(document.activeElement).not.toBe(status)
+  })
+})
+
+describe('the add-task control is available on every tab (5.2)', () => {
+  it('has an accessible name identifying it as the way to add a task, and is a keyboard-reachable button, on Today, All and Completed', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    for (const tab of ['Today', 'All', 'Completed'] as const) {
+      switchTab(tab)
+      const addTaskButton = screen.getByRole('button', { name: 'Add a task' })
+      expect(addTaskButton.tagName).toBe('BUTTON')
+      expect(addTaskButton.hasAttribute('disabled')).toBe(false)
+      addTaskButton.focus()
+      expect(document.activeElement).toBe(addTaskButton)
+    }
+  })
+})
+
+describe('opening the creation form (5.3)', () => {
+  it('renders the form over the All tab, leaves All the tab in view, and moves focus into the form', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a task' }))
+
+    // The All tab is still the tab in view behind the form.
+    expect(
+      screen.getByRole('button', { name: 'All', pressed: true }),
+    ).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'All tasks' })).toBeTruthy()
+
+    const nameField = screen.getByLabelText('Name')
+    expect(document.activeElement).toBe(nameField)
+  })
+
+  it('starts empty every time it is opened: an empty name, and no duration or priority selected', async () => {
+    renderApp()
+    await waitForLoaded()
+
+    const { durationGroup, priorityGroup } = openCreateForm()
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('')
+    within(durationGroup)
+      .getAllByRole('button')
+      .forEach((button) => {
+        expect(button.getAttribute('aria-pressed')).toBe('false')
+      })
+    within(priorityGroup)
+      .getAllByRole('button')
+      .forEach((button) => {
+        expect(button.getAttribute('aria-pressed')).toBe('false')
+      })
+
+    // Partially fill the draft, then dismiss without submitting.
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Draft that should not survive' },
+    })
+    fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    // Reopening shows a fresh form, not the discarded draft.
+    const reopened = openCreateForm()
+    expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('')
+    within(reopened.durationGroup)
+      .getAllByRole('button')
+      .forEach((button) => {
+        expect(button.getAttribute('aria-pressed')).toBe('false')
+      })
+  })
+})
+
+describe('dismissing the creation form (5.4)', () => {
+  it('cancelling closes the form, creates nothing, returns focus to the trigger, and discards the draft', async () => {
+    renderApp()
+    await waitForLoaded()
+    const addTaskButton = screen.getByRole('button', { name: 'Add a task' })
+    const { durationGroup } = openCreateForm()
+
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Never created' },
+    })
+    fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByLabelText('Name')).toBeNull()
+    expect(document.activeElement).toBe(addTaskButton)
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).getByText('empty')).toBeTruthy()
+  })
+
+  it('Escape closes the form and creates nothing', async () => {
+    renderApp()
+    await waitForLoaded()
+    openCreateForm()
+
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Never created' },
+    })
+    fireEvent.keyDown(screen.getByLabelText('Name'), { key: 'Escape' })
+
+    expect(screen.queryByLabelText('Name')).toBeNull()
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).getByText('empty')).toBeTruthy()
+  })
+
+  it('activating the area outside the form (the backdrop) closes it, creates nothing, and returns focus to the trigger', async () => {
+    renderApp()
+    await waitForLoaded()
+    const addTaskButton = screen.getByRole('button', { name: 'Add a task' })
+    openCreateForm()
+
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Never created' },
+    })
+    // A click that lands on the dialog element itself - never reaching any
+    // child - is how a real `<dialog>`'s backdrop click is distinguished
+    // from a click inside its content, whose target is a descendant.
+    fireEvent.click(screen.getByRole('dialog'))
+
+    expect(screen.queryByLabelText('Name')).toBeNull()
+    expect(document.activeElement).toBe(addTaskButton)
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).getByText('empty')).toBeTruthy()
+  })
+
+  it('clicking inside the form content does not close it', async () => {
+    renderApp()
+    await waitForLoaded()
+    openCreateForm()
+
+    fireEvent.click(screen.getByLabelText('Name'))
+
+    expect(screen.getByLabelText('Name')).toBeTruthy()
+  })
+
+  it('a valid submission closes the form and returns focus to the trigger', async () => {
+    renderApp()
+    await waitForLoaded()
+    const addTaskButton = screen.getByRole('button', { name: 'Add a task' })
+
+    createTaskViaForm('Ship the feature', '30m', 'High')
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Name')).toBeNull()
+    })
+    expect(document.activeElement).toBe(addTaskButton)
+  })
+
+  it('a submission rejected for a blank name keeps the form open with the chosen duration and priority still selected', async () => {
+    renderApp()
+    await waitForLoaded()
+    const { durationGroup, priorityGroup } = openCreateForm()
+
+    fireEvent.click(within(durationGroup).getByRole('button', { name: '15m' }))
+    fireEvent.click(
+      within(priorityGroup).getByRole('button', { name: 'Medium' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    expect(await screen.findByText('Name is required.')).toBeTruthy()
+    expect(screen.getByLabelText('Name')).toBeTruthy()
+    const durationButton = within(durationGroup).getByRole('button', {
+      name: '15m',
+    })
+    const priorityButton = within(priorityGroup).getByRole('button', {
+      name: 'Medium',
+    })
+    expect(durationButton.getAttribute('aria-pressed')).toBe('true')
+    expect(priorityButton.getAttribute('aria-pressed')).toBe('true')
   })
 })
