@@ -125,8 +125,12 @@ Each step is independent and reversible on its own (unlink the Vercel project, r
 `package.json`/husky changes, revert `apply-by-section.md`) without touching application
 code or stored task data.
 
-**Bootstrapping note**: this change's own implementation (steps 2-5 above, tracked as
-tasks.md sections 2-5) has to run under the *current* `apply-by-section` convention —
-direct-to-main commits with the `Apply section N: <title>` message format — since the new
-branch+PR flow and commit format don't exist until section 3's tasks land. Only changes
-implemented *after* this one gets applied will use the new workflow.
+**Bootstrapping note** (revised after implementing section 2): this change's own
+implementation still runs direct-to-main — the branch+PR mechanics don't exist until
+section 3 builds them, so sections 2-5 of this change land as regular commits on `main`,
+not on a branch. The commit *message format* assumption was wrong, though: the
+`commit-msg` hook added in section 2 starts enforcing Conventional Commits on every commit
+the moment that section lands — including section 2's own commit — not just from section 3
+onward as originally assumed. In practice this meant section 2 had to commit itself as
+`chore(adopt-release-and-deploy-workflow): section 2 - ...` rather than the old
+`Apply section 2: ...` template. Sections 3-5 follow the same corrected format.

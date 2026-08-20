@@ -25,16 +25,32 @@ single subagent call.
 1. **Select the change** and announce "Using change: <name>" and how to
    override it (e.g. `/apply-by-section <other>`).
 
-2. **Find the next pending section.** Run `openspec instructions apply
+2. **Check out the change's branch and choose a commit type.** Run once, at
+   the start of the run, before finding the first pending section:
+   - Create or check out a git branch named exactly after the change (e.g.
+     change `redesign-ui` → branch `redesign-ui`). If the branch already
+     exists — e.g. this run is resuming a partially-applied change — check
+     it out instead of erroring; do not recreate it.
+   - Read the change's `proposal.md` and determine the Conventional Commits
+     `<type>` for this run: a "New Capabilities" entry under Capabilities →
+     `feat`; a "Modified Capabilities" entry describing a fix to existing
+     behavior → `fix`; `skip_specs: true` or no capability changes (tooling,
+     process work) → `chore`, or `refactor` if it's a pure code
+     restructuring with no behavior or tooling change.
+   - State both the branch name and the chosen `<type>` once, and reuse
+     that same `<type>` for every section's commit message and for the PR
+     title at the end of the run — do not re-derive it per section.
+
+3. **Find the next pending section.** Run `openspec instructions apply
    --change "<name>" --json` and read the tasks file(s) listed under
    `contextFiles`. Parse the `## N. <Title>` headings and find the first
    section that still has unchecked `- [ ]` items.
 
    If every section is already complete, report "All sections complete"
-   and suggest `/opsx:archive`. If `state` is `"blocked"`, report that and
-   stop instead of guessing.
+   and move on to the archive-then-PR flow below. If `state` is
+   `"blocked"`, report that and stop instead of guessing.
 
-3. **Launch exactly one subagent for that section**, using the Agent tool
+4. **Launch exactly one subagent for that section**, using the Agent tool
    with:
    - `subagent_type: "general-purpose"`
    - `run_in_background: false` (the next step depends on its result)
@@ -55,7 +71,7 @@ single subagent call.
      - a request to report back concisely: what changed, which files were
        touched, and the test result
 
-4. **When the subagent reports back**, show the user a short summary
+5. **When the subagent reports back**, show the user a short summary
    (section name, files changed, test result) and run `git diff --stat`
    so the user can see the shape of the change. Then STOP and wait for the
    user's explicit approval. Do not commit, and do not launch the next
@@ -68,10 +84,28 @@ single subagent call.
      what the tasks/specs describe, relay that to the user verbatim instead
      of asking for approval, and wait for guidance.
 
-5. **On approval**, stage and commit exactly the files touched by that
-   section, with a message naming the section, e.g.:
-   `git commit -m "Apply section 2: Domain — task model"`.
-   Then return to step 2 for the next pending section.
+6. **On approval**, stage and commit exactly the files touched by that
+   section, with a message in the format
+   `<type>(<change-name>): section N — <title>`, using the `<type>` chosen
+   in step 2, e.g.:
+   `git commit -m "feat(add-thing): section 2 — domain model"`.
+   Then return to step 3 for the next pending section.
+
+7. **After the last section, once `openspec-archive-change` (or
+   `/opsx:archive`) has completed on this same branch**, finish the
+   change's workflow:
+   - Push the branch: `git push -u origin <branch-name>`.
+   - Open a pull request: `gh pr create --title
+     "<type>(<change-name>): <summary>" --body "..."`, using the same
+     `<type>` chosen in step 2 and a short summary of the change.
+   - Report the PR URL to the user.
+
+   This step only runs after archiving has happened on the same branch —
+   archiving is a separate command/skill this one does not invoke itself,
+   but the PR should not be opened until it's done, since the archived
+   specs belong in the same PR as the implementation. Opening the PR does
+   not merge it: squash-merging remains a manual, user-approved step that
+   this command never performs.
 
 **Guardrails**
 - One section per subagent call, never more — and never let a subagent
@@ -105,9 +139,26 @@ changes needed.
 
 **On completion**
 
+When the last section is committed:
+
 ```
 ## All sections complete
 
-<name> is fully implemented and committed section by section.
+<name> is fully implemented and committed section by section on branch
+<branch-name>.
 Suggested next step: /opsx:archive
+```
+
+Once `/opsx:archive` (or `openspec-archive-change`) has completed on that
+same branch, carry out step 7 above (push the branch, open the PR) and
+report:
+
+```
+## Change ready for review
+
+<name> is implemented, archived, and pushed on branch <branch-name>.
+Pull request: <PR URL>
+
+This change is not done until that PR is reviewed and merged — sections
+complete and archiving complete are not the same as finished.
 ```
