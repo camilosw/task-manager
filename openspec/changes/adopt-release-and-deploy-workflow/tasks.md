@@ -39,11 +39,11 @@
 
 ## 4. Vercel deployment
 
-- [ ] 4.1 Import `camilosw/task-manager` into Vercel (dashboard import or `vercel link`);
+- [x] 4.1 Import `camilosw/task-manager` into Vercel (dashboard import or `vercel link`);
       confirm the Vite framework preset is auto-detected and no `vercel.json` is committed
-- [ ] 4.2 Trigger the first production deploy and confirm the served build matches what
+- [x] 4.2 Trigger the first production deploy and confirm the served build matches what
       `npm run build` produces locally
-- [ ] 4.3 Open a pull request (this change's own, once section 3 lands, or a throwaway one)
+- [x] 4.3 Open a pull request (this change's own, once section 3 lands, or a throwaway one)
       and confirm Vercel posts a preview deployment for it
 
 ## 5. First release
