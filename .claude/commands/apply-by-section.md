@@ -89,6 +89,9 @@ single subagent call.
    `<type>(<change-name>): section N — <title>`, using the `<type>` chosen
    in step 2, e.g.:
    `git commit -m "feat(add-thing): section 2 — domain model"`.
+   commitlint caps the header at 100 characters — if `<change-name>` is
+   long, shorten `<title>` (or drop it) so the header fits; don't let the
+   commit fail the hook over a header length.
    Then return to step 3 for the next pending section.
 
 7. **After the last section, once `openspec-archive-change` (or
