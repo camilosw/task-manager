@@ -48,8 +48,8 @@
 
 ## 5. First release
 
-- [ ] 5.1 Run `npm run release:first` to seed the initial tag without generating a
+- [x] 5.1 Run `npm run release:first` to seed the initial tag without generating a
       changelog from the existing non-conventional history
-- [ ] 5.2 Push the tag with `git push --follow-tags`
-- [ ] 5.3 Verify `CHANGELOG.md` was created and `package.json` `version` was updated as
+- [x] 5.2 Push the tag with `git push --follow-tags`
+- [x] 5.3 Verify `CHANGELOG.md` was created and `package.json` `version` was updated as
       expected
