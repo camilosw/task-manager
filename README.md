@@ -17,3 +17,10 @@ npm run dev
 - `npm run build` — type-check and build for production
 - `npm run test` — run the test suite (Vitest)
 - `npm run lint` — run ESLint
+
+## Deployment
+
+Production is deployed on [Vercel](https://task-manager-tawny-gamma-81.vercel.app),
+building on every push to `main`. Pull requests get their own preview deployment.
+No Vercel configuration is committed to the repo — the Vite framework preset is
+auto-detected.
