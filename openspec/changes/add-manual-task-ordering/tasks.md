@@ -68,7 +68,7 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Verify by hand on a touch device that a short press-and-scroll still scrolls the All tab, that a held press begins a drag, and that dropping outside a group returns the task to its position — record the result, since jsdom cannot produce these event sequences
-- [ ] 10.2 Verify by hand with a mouse that a click on a row's checkbox, edit or delete control still acts on that control rather than starting a drag
-- [ ] 10.3 Verify by hand that a build installed over an existing one preserves the user's task order, by loading the previous version's data before updating
-- [ ] 10.4 Run the full suite, the linter, and the formatter, and confirm `openspec validate add-manual-task-ordering --strict` still passes
+- [x] 10.1 Verify by hand on a touch device that a short press-and-scroll still scrolls the All tab, that a held press begins a drag, and that dropping outside a group returns the task to its position — record the result, since jsdom cannot produce these event sequences
+- [x] 10.2 Verify by hand with a mouse that a click on a row's checkbox, edit or delete control still acts on that control rather than starting a drag
+- [x] 10.3 Verify by hand that a build installed over an existing one preserves the user's task order, by loading the previous version's data before updating
+- [x] 10.4 Run the full suite, the linter, and the formatter, and confirm `openspec validate add-manual-task-ordering --strict` still passes
