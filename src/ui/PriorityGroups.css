@@ -1,0 +1,55 @@
+/**
+ * Shared priority-group rendering, used by both the Today and All tabs
+ * (see PriorityGroups.tsx). The heading's own text names its level; the
+ * marker beside it is a sibling, not a child, of the <h3> (see
+ * PriorityGroups.tsx) so the heading's accessible text is never anything
+ * but the plain level name - the marker "SHALL NOT be the only thing
+ * distinguishing one heading from another".
+ */
+
+.priority-group {
+  margin-bottom: 22px;
+}
+
+.priority-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.priority-group__heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+}
+
+.priority-group__marker {
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  flex: none;
+  background: var(--priority-medium-marker);
+}
+
+.priority-group__marker[data-priority='urgent'] {
+  background: var(--priority-urgent-marker);
+}
+.priority-group__marker[data-priority='high'] {
+  background: var(--priority-high-marker);
+}
+.priority-group__marker[data-priority='medium'] {
+  background: var(--priority-medium-marker);
+}
+.priority-group__marker[data-priority='low'] {
+  background: var(--priority-low-marker);
+}
+.priority-group__marker[data-priority='very-low'] {
+  background: var(--priority-very-low-marker);
+}
+
+.priority-group__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

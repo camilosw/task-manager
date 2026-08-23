@@ -3,6 +3,8 @@ import {
   completeTask as completeTaskDomain,
   createTask as createTaskDomain,
   editTask as editTaskDomain,
+  nextPlace,
+  reorderWithinPriority,
   type CreateTaskResult,
   type EditTaskInput,
   type EditTaskResult,
@@ -193,6 +195,7 @@ export function AppStateProvider({
         name: input.name,
         duration: input.duration,
         priority: input.priority,
+        place: nextPlace(loaded.tasks),
       },
       now(),
     )
@@ -293,6 +296,23 @@ export function AppStateProvider({
     await repository.saveTasks(nextTasks)
   }
 
+  async function reorderTasks(activeId: string, overId: string): Promise<void> {
+    if (data.status !== 'loaded') {
+      throw new Error('reorderTasks called before state finished loading')
+    }
+    const loaded = data
+
+    const nextTasks = reorderWithinPriority(loaded.tasks, activeId, overId)
+
+    // Reordering changes no task's id, only places, so the snapshot — which
+    // holds ids, not copied task values — cannot be invalidated by it (see
+    // design.md, decision 5). Only the tasks record is persisted here, in
+    // keeping with `completeTask` above and with specs/daily-plan/spec.md,
+    // "A reordering waits for the next computation".
+    dispatch({ type: 'set', tasks: nextTasks, snapshot: loaded.snapshot })
+    await repository.saveTasks(nextTasks)
+  }
+
   async function recalculateToday(): Promise<void> {
     if (data.status !== 'loaded') {
       throw new Error('recalculateToday called before state finished loading')
@@ -316,6 +336,7 @@ export function AppStateProvider({
           deleteTask,
           completeTask,
           recalculateToday,
+          reorderTasks,
         }
 
   return (

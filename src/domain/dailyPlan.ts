@@ -11,18 +11,20 @@ export const DAILY_BUDGET_MINUTES = 60
 
 /**
  * Orders tasks the way the daily plan selection considers them: by priority
- * first (most important first), then by creation timestamp ascending
- * (oldest first) within the same priority level. Duration plays no part in
- * the ordering, so two same-priority tasks are never reordered relative to
- * each other by how long they take (see specs/daily-plan/spec.md,
- * "Ordering within the selection").
+ * first (most important first), then by the user-arranged `place` ascending
+ * within the same priority level. Duration plays no part in the ordering,
+ * so two same-priority tasks are never reordered relative to each other by
+ * how long they take, and `createdAt` plays no part either — a task that
+ * has never been reordered holds a place matching its creation order, but
+ * once reordered, the arranged place overrides age (see
+ * specs/daily-plan/spec.md, "Ordering within the selection").
  */
 export function compareForSelection(a: Task, b: Task): number {
   const byPriority = comparePriority(a.priority, b.priority)
   if (byPriority !== 0) {
     return byPriority
   }
-  return a.createdAt.getTime() - b.createdAt.getTime()
+  return a.place - b.place
 }
 
 /**

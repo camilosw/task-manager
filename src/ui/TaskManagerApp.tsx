@@ -1,9 +1,23 @@
 import { useState } from 'react'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { compareForSelection } from '../domain/dailyPlan'
 import type { CreateTaskResult } from '../domain/task'
+import { handleTaskDragEnd } from './dragReorder'
+import { reorderAnnouncements } from './reorderAnnouncements'
 import { useAppState } from './useAppState'
 import type { AppState, CreateTaskFormInput } from './appStateContext'
 import { CreateTaskSheet } from './CreateTaskSheet'
+import { PriorityGroups } from './PriorityGroups'
 import { TaskList } from './TaskList'
 import { TodayTab } from './TodayTab'
 import { ThemeToggle } from './ThemeToggle'
@@ -54,6 +68,28 @@ export function TaskManagerApp() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const feedback = useActionFeedback()
 
+  // The All tab's drag sensors (see specs/task-views/spec.md, "Tasks are
+  // reordered in the All tab only", and design.md, decision 6): `distance:
+  // 8` lets a mouse click still read as a click rather than always starting
+  // a drag, and `delay: 250, tolerance: 5` lets a short press-and-scroll on
+  // a touch screen still scroll the page. `KeyboardSensor` with
+  // `sortableKeyboardCoordinates` is what makes reordering operable without
+  // a pointer or touch gesture at all (specs/task-views/spec.md,
+  // "Reordering is operable without a drag gesture"). Declared
+  // unconditionally, above the loading early-return below, because hooks
+  // cannot be called conditionally — it costs nothing while the Today or
+  // Completed tab is in view, since `DndContext` is only mounted around the
+  // All tab's panel further down.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
   if (state.status === 'loading') {
     return <p>Loading…</p>
   }
@@ -97,13 +133,36 @@ export function TaskManagerApp() {
     feedback.show('Today recalculated')
   }
 
+  // `handleTaskDragEnd` is the thin translation from `{active, over}` to a
+  // `reorderTasks` call (see dragReorder.ts and design.md, decision 7); it
+  // produces no confirmation of its own, deliberately - see
+  // specs/action-feedback/spec.md, "The list of actions that show a
+  // confirmation is closed", which reordering is not on.
+  function handleDragEnd(event: DragEndEvent): void {
+    assertLoaded(state)
+    handleTaskDragEnd(
+      {
+        active: { id: String(event.active.id) },
+        over: event.over ? { id: String(event.over.id) } : null,
+      },
+      state.tasks,
+      (activeId, overId) => {
+        void state.reorderTasks(activeId, overId)
+      },
+    )
+  }
+
   const pendingTasks = state.tasks.filter((task) => task.completedAt === null)
   const completedTasks = state.tasks.filter((task) => task.completedAt !== null)
 
-  // The All tab lists every pending task ordered by priority then age (see
-  // specs/task-views/spec.md, "The All tab orders by priority then age").
-  // `compareForSelection` is exactly that ordering, with no dependency on
-  // today's snapshot, so it is reused directly rather than reimplemented.
+  // The All tab groups every pending task under priority headings (see
+  // specs/task-views/spec.md, "The All tab groups tasks by priority"),
+  // ordered within each group by priority then place (see "The All tab
+  // orders by priority then age"). `compareForSelection` is exactly that
+  // ordering, with no dependency on today's snapshot, so it is reused
+  // directly rather than reimplemented — sorting the flat list before
+  // handing it to `PriorityGroups` produces the same per-group order as
+  // sorting each group independently would (see TodayTab.tsx).
   const allTasks = [...pendingTasks].sort(compareForSelection)
 
   // The Completed tab lists every completed task, most recently completed
@@ -181,12 +240,29 @@ export function TaskManagerApp() {
       {activeTab === 'all' && (
         <section aria-label="All tasks" className="app__panel">
           <h2 className="sr-only">All</h2>
-          <TaskList
-            tasks={allTasks}
-            onEdit={state.editTask}
-            onDelete={handleDelete}
-            onComplete={handleComplete}
-          />
+          {/* A single DndContext over the whole tab; PriorityGroups renders
+              one SortableContext per priority group beneath it (see
+              TaskList.tsx and design.md, decision 7). Screen-reader
+              announcements are always on as soon as DndContext is used;
+              `accessibility.announcements` below only replaces dnd-kit's
+              generic wording with one that names the tasks involved (see
+              reorderAnnouncements.ts, and specs/task-views/spec.md, "the
+              outcome of a completed move is conveyed to assistive
+              technology"). */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            accessibility={{ announcements: reorderAnnouncements(allTasks) }}
+          >
+            <PriorityGroups
+              tasks={allTasks}
+              onEdit={state.editTask}
+              onDelete={handleDelete}
+              onComplete={handleComplete}
+              reorderable
+            />
+          </DndContext>
         </section>
       )}
 

@@ -93,6 +93,24 @@ export function PlusIcon(props: IconProps) {
   )
 }
 
+/** The drag handle that starts a reordering in the All tab (see
+ * specs/task-views/spec.md, "Tasks are reordered in the All tab only", and
+ * design.md, decision 7: a dedicated element carrying the sortable
+ * listeners, so the drag starts only from it). A vertical grip of six dots,
+ * the conventional affordance for a draggable handle. */
+export function GripIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="18" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="18" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  )
+}
+
 /** Exported for parity with the mockup's icon set (design.md, decision 14);
  * not currently wired to a control of its own - Escape, the backdrop, and
  * "Cancel" already dismiss the creation sheet, and adding a redundant close

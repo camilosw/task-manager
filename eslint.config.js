@@ -52,6 +52,11 @@ export default defineConfig([
               message:
                 'The domain layer must not import a storage API or the persistence layer (see design.md, decision 1).',
             },
+            {
+              group: ['@dnd-kit', '@dnd-kit/*'],
+              message:
+                'The domain layer must not import the drag library; reordering is a plain function and dnd-kit is wired only in the UI (see design.md, decision 6).',
+            },
           ],
         },
       ],

@@ -41,7 +41,34 @@ single subagent call.
      that same `<type>` for every section's commit message and for the PR
      title at the end of the run — do not re-derive it per section.
 
-3. **Find the next pending section.** Run `openspec instructions apply
+3. **Commit the planning artifacts.** Run once, immediately after the
+   branch exists and before the first section's subagent is launched:
+   - Stage only the change's own directory —
+     `git add openspec/changes/<change-name>` — which picks up
+     `proposal.md`, `design.md`, `specs/`, `tasks.md` and `.openspec.yaml`,
+     including any of them still untracked. Never stage anything outside
+     that directory here; unrelated working-tree changes are not this
+     command's to commit.
+   - If that stages nothing, the artifacts are already committed — the
+     normal case when resuming a partially-applied change. Say so and move
+     on to step 4.
+   - Otherwise commit with `docs(<change-name>): plan <short summary>`,
+     e.g. `git commit -m "docs(add-thing): plan manual reordering"`.
+   - **Use `docs` here, not the `<type>` chosen in step 2.** The release
+     tooling builds the CHANGELOG from Conventional Commits, so a `feat:`
+     commit carrying only planning documents would announce a feature that
+     has not been implemented yet. The step 2 `<type>` belongs to the
+     section commits and the PR title, never to this one.
+   - The same 100-character commitlint cap applies — shorten the summary
+     if the header would exceed it.
+
+   This commit needs no user approval: it contains no code, only artifacts
+   the user already reviewed as they were written. Landing them on the
+   branch before any implementation exists is what keeps the eventual PR
+   self-contained — the specs that justify the code travel with it instead
+   of being stranded on the base branch.
+
+4. **Find the next pending section.** Run `openspec instructions apply
    --change "<name>" --json` and read the tasks file(s) listed under
    `contextFiles`. Parse the `## N. <Title>` headings and find the first
    section that still has unchecked `- [ ]` items.
@@ -50,7 +77,7 @@ single subagent call.
    and move on to the archive-then-PR flow below. If `state` is
    `"blocked"`, report that and stop instead of guessing.
 
-4. **Launch exactly one subagent for that section**, using the Agent tool
+5. **Launch exactly one subagent for that section**, using the Agent tool
    with:
    - `subagent_type: "general-purpose"`
    - `run_in_background: false` (the next step depends on its result)
@@ -71,7 +98,7 @@ single subagent call.
      - a request to report back concisely: what changed, which files were
        touched, and the test result
 
-5. **When the subagent reports back**, show the user a short summary
+6. **When the subagent reports back**, show the user a short summary
    (section name, files changed, test result) and run `git diff --stat`
    so the user can see the shape of the change. Then STOP and wait for the
    user's explicit approval. Do not commit, and do not launch the next
@@ -84,7 +111,7 @@ single subagent call.
      what the tasks/specs describe, relay that to the user verbatim instead
      of asking for approval, and wait for guidance.
 
-6. **On approval**, stage and commit exactly the files touched by that
+7. **On approval**, stage and commit exactly the files touched by that
    section, with a message in the format
    `<type>(<change-name>): section N — <title>`, using the `<type>` chosen
    in step 2, e.g.:
@@ -92,9 +119,9 @@ single subagent call.
    commitlint caps the header at 100 characters — if `<change-name>` is
    long, shorten `<title>` (or drop it) so the header fits; don't let the
    commit fail the hook over a header length.
-   Then return to step 3 for the next pending section.
+   Then return to step 4 for the next pending section.
 
-7. **After the last section, once `openspec-archive-change` (or
+8. **After the last section, once `openspec-archive-change` (or
    `/opsx:archive`) has completed on this same branch**, finish the
    change's workflow:
    - Push the branch: `git push -u origin <branch-name>`.
@@ -115,6 +142,11 @@ single subagent call.
   continue past the section it was assigned.
 - Never commit without an explicit approval from the user for that
   section's diff, even if the diff looks trivial or obviously correct.
+  The planning-artifact commit in step 3 is the sole exception, and only
+  because it contains no code.
+- Never start a section before the planning artifacts are on the branch —
+  a run that implements code first leaves the PR describing changes whose
+  specs live somewhere else.
 - Never skip the pause-and-review step.
 - Keep your own orchestrator messages short: the point of this workflow is
   to keep this conversation's context small, so let the subagent do the
@@ -153,7 +185,7 @@ Suggested next step: /opsx:archive
 ```
 
 Once `/opsx:archive` (or `openspec-archive-change`) has completed on that
-same branch, carry out step 7 above (push the branch, open the PR) and
+same branch, carry out step 8 above (push the branch, open the PR) and
 report:
 
 ```

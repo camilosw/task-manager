@@ -9,6 +9,7 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     duration: 30,
     priority: 'medium',
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
+    place: 0,
     completedAt: null,
     ...overrides,
   }
@@ -63,6 +64,19 @@ export function runRepositoryContractTests(
       const data = await repository.loadAll()
 
       expect(sortedById(data.tasks)).toEqual(sortedById([urgent, completed]))
+    })
+
+    it("round-trips a task's place", async () => {
+      const repository = await createRepository()
+      const first = makeTask({ id: 'first-place', place: 3 })
+      const second = makeTask({ id: 'second-place', place: 0 })
+
+      await repository.saveTasks([first, second])
+      const data = await repository.loadAll()
+
+      const placeById = new Map(data.tasks.map((task) => [task.id, task.place]))
+      expect(placeById.get('first-place')).toBe(3)
+      expect(placeById.get('second-place')).toBe(0)
     })
 
     it('round-trips the saved snapshot', async () => {
