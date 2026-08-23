@@ -1,7 +1,7 @@
 ## 1. Dependencies
 
-- [ ] 1.1 Add `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities` as runtime dependencies, and confirm the existing suite, lint, and build all stay green with them installed but unused
-- [ ] 1.2 Verify the import-boundary lint rule still fails on a deliberate `@dnd-kit` import from `src/domain/`, then revert the violation — the drag library must never reach the domain layer
+- [x] 1.1 Add `@dnd-kit/core`, `@dnd-kit/sortable`, and `@dnd-kit/utilities` as runtime dependencies, and confirm the existing suite, lint, and build all stay green with them installed but unused
+- [x] 1.2 Verify the import-boundary lint rule still fails on a deliberate `@dnd-kit` import from `src/domain/`, then revert the violation — the drag library must never reach the domain layer
 
 ## 2. Domain — the place attribute
 
