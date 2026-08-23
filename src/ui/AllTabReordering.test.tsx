@@ -398,3 +398,182 @@ describe('a completed move is announced through the live region (8.7)', () => {
     })
   })
 })
+
+/** The app's own confirmation region (design.md, decision 7), disambiguated
+ * from dnd-kit's own `role="status"` live region by `aria-live`: this app's
+ * region is `polite`; dnd-kit's is `assertive` (see the `dndLiveRegion`
+ * helpers above, and TaskManagerApp.test.tsx's `getFeedbackRegion`). */
+function getFeedbackRegion(): HTMLElement {
+  const region = screen
+    .getAllByRole('status')
+    .find((element) => element.getAttribute('aria-live') === 'polite')
+  if (!region) throw new Error('expected the app feedback region')
+  return region
+}
+
+describe('a completed reordering confirms nothing (9.6)', () => {
+  mockTaskRowLayout()
+
+  it('does not show or replace a confirmation when a keyboard reordering completes', async () => {
+    const urgentTask = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent one',
+      priority: 'urgent',
+      place: 0,
+    })
+    const m1 = mediumTask('m1', 'Medium first', 1)
+    const m2 = mediumTask('m2', 'Medium second', 2)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgentTask, m1, m2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [urgentTask.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    // Puts a confirmation on screen from an earlier, unrelated action, so
+    // the reordering below can be shown not to replace it (see
+    // specs/action-feedback/spec.md, "Reordering a task confirms nothing" —
+    // "a confirmation already on screen from an earlier action is not
+    // replaced by the reordering").
+    const urgentItem = within(screen.getByRole('region', { name: 'Urgent' }))
+      .getByText('Urgent one')
+      .closest('li')
+    if (!urgentItem) throw new Error('expected a list item')
+    fireEvent.click(within(urgentItem).getByRole('checkbox'))
+    expect(await screen.findByText('Task completed')).toBeTruthy()
+
+    switchTab('All')
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const firstItem = within(mediumGroup)
+      .getByText('Medium first')
+      .closest('li')
+    if (!firstItem) throw new Error('expected a list item')
+    const handle = within(firstItem).getByRole('button', { name: 'Reorder' })
+
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    // The reordering really completed - proof this isn't merely "nothing
+    // happened yet".
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Medium' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual([
+        'm2',
+        'm1',
+      ])
+    })
+    // Yet the app's confirmation region still shows the earlier action's
+    // message, unchanged - no "Task moved" or similar appeared, and the
+    // prior confirmation was not cleared either.
+    expect(getFeedbackRegion().textContent).toBe('Task completed')
+  })
+})
+
+describe('a rejected or abandoned drag confirms nothing (9.6)', () => {
+  mockTaskRowLayout()
+
+  it('shows no confirmation and no validation message after a drop rejected for crossing priority groups', async () => {
+    const m1 = mediumTask('m1', 'Medium first', 0)
+    const m2 = mediumTask('m2', 'Medium second', 1)
+    const low: Task = {
+      id: 'low1',
+      name: 'Low task',
+      duration: 30,
+      priority: 'low',
+      createdAt: new Date('2026-08-17T09:00:00.000Z'),
+      place: 2,
+      completedAt: null,
+    }
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([m1, m2, low])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const lastItem = within(mediumGroup)
+      .getByText('Medium second')
+      .closest('li')
+    if (!lastItem) throw new Error('expected a list item')
+    const handle = within(lastItem).getByRole('button', { name: 'Reorder' })
+
+    function dndLiveRegion(): HTMLElement {
+      const region = screen
+        .getAllByRole('status')
+        .find((element) => element.getAttribute('aria-live') === 'assertive')
+      if (!region) throw new Error('expected the dnd-kit live region')
+      return region
+    }
+
+    // A drop that lands in a different priority group — rejected, per 8.3
+    // and 8.6.
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    // The drop really reached "Low task" - proof this is a rejection dnd-kit
+    // itself completed, not a move that never happened.
+    await waitFor(() => {
+      expect(dndLiveRegion().textContent).toContain('Low task')
+    })
+
+    expect(getFeedbackRegion().textContent).toBe('')
+    expect(screen.queryByText(/required/i)).toBeNull()
+  })
+
+  it('shows no confirmation and no validation message after an abandoned (escaped) keyboard drag', async () => {
+    const m1 = mediumTask('m1', 'Medium first', 0)
+    const m2 = mediumTask('m2', 'Medium second', 1)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([m1, m2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const firstItem = within(mediumGroup)
+      .getByText('Medium first')
+      .closest('li')
+    if (!firstItem) throw new Error('expected a list item')
+    const handle = within(firstItem).getByRole('button', { name: 'Reorder' })
+
+    handle.focus()
+    fireEvent.keyDown(handle, { code: 'Space' })
+    await nextTick()
+    // Escape cancels the drag rather than dropping it (dnd-kit's
+    // KeyboardSensor default `cancel` code) - this is the keyboard
+    // equivalent of "abandons the drag without dropping it".
+    fireEvent.keyDown(handle, { code: 'Escape' })
+    await nextTick()
+
+    // The places are untouched - proof the drag was really abandoned rather
+    // than silently completed.
+    const items = within(
+      screen.getByRole('region', { name: 'Medium' }),
+    ).getAllByRole('listitem')
+    expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual([
+      'm1',
+      'm2',
+    ])
+    expect(getFeedbackRegion().textContent).toBe('')
+    expect(screen.queryByText(/required/i)).toBeNull()
+  })
+})

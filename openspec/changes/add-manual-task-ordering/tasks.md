@@ -59,12 +59,12 @@
 
 ## 9. UI — Today, Completed, and feedback
 
-- [ ] 9.1 Write a failing test that each Today group orders its tasks by place rather than by creation timestamp
-- [ ] 9.2 Write a failing test for the cross-tab scenario: with Today holding H1, M1 and M2 and a pending M3 outside the plan, moving M2 above M1 in the All tab makes Today show H1, M2, M1 while M3 stays out and nothing is removed
-- [ ] 9.3 Write a failing test that moving a task not in today's plan to the first position of its group in the All tab still leaves it absent from the Today tab
-- [ ] 9.4 Write a failing test that a task completed today keeps its position in the Today group's order, struck through, rather than moving
-- [ ] 9.5 Write a failing test that neither the Today tab nor the Completed tab offers a reordering control, and that the Completed tab still lists most recently completed first
-- [ ] 9.6 Write a failing test that a completed reordering displays no confirmation, does not replace a confirmation already on screen from an earlier action, and that a rejected or abandoned drag displays neither a confirmation nor a validation message
+- [x] 9.1 Write a failing test that each Today group orders its tasks by place rather than by creation timestamp
+- [x] 9.2 Write a failing test for the cross-tab scenario: with Today holding H1, M1 and M2 and a pending M3 outside the plan, moving M2 above M1 in the All tab makes Today show H1, M2, M1 while M3 stays out and nothing is removed
+- [x] 9.3 Write a failing test that moving a task not in today's plan to the first position of its group in the All tab still leaves it absent from the Today tab
+- [x] 9.4 Write a failing test that a task completed today keeps its position in the Today group's order, struck through, rather than moving
+- [x] 9.5 Write a failing test that neither the Today tab nor the Completed tab offers a reordering control, and that the Completed tab still lists most recently completed first
+- [x] 9.6 Write a failing test that a completed reordering displays no confirmation, does not replace a confirmation already on screen from an earlier action, and that a rejected or abandoned drag displays neither a confirmation nor a validation message
 
 ## 10. Verification
 

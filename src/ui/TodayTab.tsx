@@ -18,11 +18,13 @@ export type TodayTabProps = {
  * very low — through the shared `PriorityGroups` component (see
  * specs/task-views/spec.md, "The Today tab groups tasks by priority"). A
  * priority with no tasks in today's plan is omitted entirely, heading
- * included. Within a group, tasks are ordered oldest first by creation
- * timestamp — sorting the flat, resolved list by `createdAt` before handing
- * it to `PriorityGroups` produces the same per-group order as sorting each
- * group independently would, since filtering a globally-sorted list
- * preserves that order within every subset.
+ * included. Within a group, tasks are ordered by the user-arranged `place`
+ * (see specs/task-views/spec.md, "Ordering within a Today group", and
+ * design.md, decision 4) rather than by creation timestamp — sorting the
+ * flat, resolved list by `place` before handing it to `PriorityGroups`
+ * produces the same per-group order as sorting each group independently
+ * would, since filtering a globally-sorted list preserves that order within
+ * every subset.
  *
  * `resolveSnapshotTasks` does not filter by completion, so a task
  * completed from Today stays in its group — `TaskItem` renders it struck
@@ -38,9 +40,12 @@ export function TodayTab({
   onComplete,
 }: TodayTabProps) {
   const planned = snapshot ? resolveSnapshotTasks(snapshot, tasks) : []
-  const sorted = [...planned].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-  )
+  // Ordered by the user-arranged `place`, not creation timestamp (see
+  // specs/task-views/spec.md, "Ordering within a Today group", and
+  // design.md, decision 4). A task completed today keeps whatever place it
+  // already held, so it stays at that position, struck through, rather than
+  // moving.
+  const sorted = [...planned].sort((a, b) => a.place - b.place)
 
   return (
     <PriorityGroups

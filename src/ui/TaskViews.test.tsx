@@ -133,22 +133,29 @@ describe('Today tab grouping (9.2)', () => {
   })
 
   it('orders tasks within a group oldest first', async () => {
+    // Neither ever reordered, so each holds a place matching its creation
+    // order (see specs/task-views/spec.md, "Ordering within a list" —
+    // "a task that has never been reordered holds a place matching its
+    // creation order"); this is what the Today tab actually sorts by (see
+    // tasks.md, 9.1), and it happens to reproduce the age order pinned here.
     const older = makeTask({
       id: 'older',
       name: 'Older task',
       priority: 'medium',
       createdAt: new Date('2026-08-18T05:00:00.000Z'),
+      place: 0,
     })
     const newer = makeTask({
       id: 'newer',
       name: 'Newer task',
       priority: 'medium',
       createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 1,
     })
 
     const repository = createInMemoryRepository()
-    // Save in reverse creation order to prove display order is not just
-    // insertion order.
+    // Save in reverse creation (and place) order to prove display order is
+    // not just insertion order.
     await repository.saveTasks([newer, older])
     await repository.saveSnapshot({
       date: '2026-08-18',
@@ -168,6 +175,46 @@ describe('Today tab grouping (9.2)', () => {
   })
 })
 
+describe('Today groups order tasks by place, not creation time (9.1)', () => {
+  it('orders a Today group by place even when that disagrees with creation order', async () => {
+    // createdAt would put "Older, held back" first; place puts it last.
+    // Only a fix that sorts by `place` — the point of tasks.md, 9.1 — can
+    // produce the expected order below.
+    const olderHeldBack = makeTask({
+      id: 'older-held-back',
+      name: 'Older, held back',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T05:00:00.000Z'),
+      place: 5,
+    })
+    const newerMovedUp = makeTask({
+      id: 'newer-moved-up',
+      name: 'Newer, moved up',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 1,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([olderHeldBack, newerMovedUp])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [olderHeldBack.id, newerMovedUp.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const items = within(mediumGroup).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('Newer, moved up'),
+      expect.stringContaining('Older, held back'),
+    ])
+  })
+})
+
 describe('shared priority-group rendering (7.1)', () => {
   it("pins the Today tab's grouped output — headings, markers, and hidden empty groups — across the extraction into a shared component", async () => {
     const urgent = makeTask({
@@ -181,12 +228,14 @@ describe('shared priority-group rendering (7.1)', () => {
       name: 'Medium older',
       priority: 'medium',
       createdAt: new Date('2026-08-18T06:00:00.000Z'),
+      place: 0,
     })
     const mediumNewer = makeTask({
       id: 'medium-newer',
       name: 'Medium newer',
       priority: 'medium',
       createdAt: new Date('2026-08-18T08:00:00.000Z'),
+      place: 1,
     })
 
     const repository = createInMemoryRepository()
@@ -488,6 +537,296 @@ describe('tasks within an All tab group are ordered by place (7.3)', () => {
         expect.stringContaining('Medium second'),
       ])
     })
+  })
+})
+
+describe('a reordering in the All tab re-sequences Today without changing membership (9.2)', () => {
+  /** Same pattern as the 7.3 suite above: calls `reorderTasks` directly, with
+   * no drag interaction, since this only needs to prove the cross-tab
+   * consequence of a reordering that has already happened. */
+  function ReorderTrigger({
+    activeId,
+    overId,
+  }: {
+    activeId: string
+    overId: string
+  }) {
+    const state = useAppState()
+    if (state.status !== 'loaded') return null
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          void state.reorderTasks(activeId, overId)
+        }}
+      >
+        Test reorder
+      </button>
+    )
+  }
+
+  it('shows H1, M2, M1 in Today after moving M2 above M1 in the All tab, while M3 stays out and nothing is removed', async () => {
+    // The worked example from specs/task-views/spec.md, "Reordering does not
+    // change what the Today tab contains" — "A reordering re-sequences
+    // Today without changing its membership". `createdAt` is left in its
+    // natural creation order (M1 before M2) so that, before the fix for
+    // tasks.md 9.1, the Today tab would still show M1 before M2 after the
+    // reorder below — proving this test actually exercises place-based
+    // ordering rather than an order that would hold either way.
+    const h1 = makeTask({
+      id: 'h1',
+      name: 'H1',
+      priority: 'high',
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+      place: 0,
+    })
+    const m1 = makeTask({
+      id: 'm1',
+      name: 'M1',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+      place: 1,
+    })
+    const m2 = makeTask({
+      id: 'm2',
+      name: 'M2',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+      place: 2,
+    })
+    const m3 = makeTask({
+      id: 'm3',
+      name: 'M3',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 3,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([h1, m1, m2, m3])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      // M3 is pending but outside today's frozen plan.
+      plannedIds: [h1.id, m1.id, m2.id],
+      admittedIds: [],
+    })
+
+    render(
+      <AppStateProvider repository={repository} now={() => FIXED_NOW}>
+        <TaskManagerApp />
+        <ReorderTrigger activeId="m2" overId="m1" />
+      </AppStateProvider>,
+    )
+    await waitForLoaded()
+
+    const todayBefore = screen.getByRole('region', { name: 'Today' })
+    expect(
+      within(todayBefore)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      expect.stringContaining('H1'),
+      expect.stringContaining('M1'),
+      expect.stringContaining('M2'),
+    ])
+    expect(within(todayBefore).queryByText('M3')).toBeNull()
+
+    // Moves M2 above M1, per the All tab's place order.
+    fireEvent.click(screen.getByRole('button', { name: 'Test reorder' }))
+
+    await waitFor(() => {
+      const items = within(screen.getByRole('region', { name: 'Today' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+      expect(items).toEqual([
+        expect.stringContaining('H1'),
+        expect.stringContaining('M2'),
+        expect.stringContaining('M1'),
+      ])
+    })
+    expect(
+      within(screen.getByRole('region', { name: 'Today' })).queryByText('M3'),
+    ).toBeNull()
+  })
+})
+
+describe('a reordering cannot pull a task into Today (9.3)', () => {
+  function ReorderTrigger({
+    activeId,
+    overId,
+  }: {
+    activeId: string
+    overId: string
+  }) {
+    const state = useAppState()
+    if (state.status !== 'loaded') return null
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          void state.reorderTasks(activeId, overId)
+        }}
+      >
+        Test reorder
+      </button>
+    )
+  }
+
+  it('leaves a task moved to the first position of its group absent from Today, though it appears first in All', async () => {
+    const planned = makeTask({
+      id: 'planned',
+      name: 'Planned medium',
+      priority: 'medium',
+      place: 0,
+    })
+    const notPlanned = makeTask({
+      id: 'not-planned',
+      name: 'Not planned medium',
+      priority: 'medium',
+      place: 1,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([planned, notPlanned])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [planned.id],
+      admittedIds: [],
+    })
+
+    render(
+      <AppStateProvider repository={repository} now={() => FIXED_NOW}>
+        <TaskManagerApp />
+        <ReorderTrigger activeId="not-planned" overId="planned" />
+      </AppStateProvider>,
+    )
+    await waitForLoaded()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test reorder' }))
+
+    switchTab('All')
+    await waitFor(() => {
+      const items = within(screen.getByRole('region', { name: 'Medium' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+      expect(items[0]).toEqual(expect.stringContaining('Not planned medium'))
+    })
+
+    switchTab('Today')
+    expect(
+      within(screen.getByRole('region', { name: 'Today' })).queryByText(
+        'Not planned medium',
+      ),
+    ).toBeNull()
+  })
+})
+
+describe('a task completed today keeps its place in the Today order (9.4)', () => {
+  it('stays struck through at its arranged position rather than moving to the top or bottom', async () => {
+    // `createdAt` is deliberately not in place order (M2 is oldest but
+    // arranged in the middle), so that a comparator that still consulted
+    // age — rather than only `place` — would put the completed task first
+    // instead of in the middle asserted below.
+    const m1 = makeTask({
+      id: 'm1',
+      name: 'M1 pending',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      place: 0,
+    })
+    const m2 = makeTask({
+      id: 'm2',
+      name: 'M2 completed',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 1,
+      completedAt: new Date('2026-08-18T09:30:00.000Z'),
+    })
+    const m3 = makeTask({
+      id: 'm3',
+      name: 'M3 pending',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T11:00:00.000Z'),
+      place: 2,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([m1, m2, m3])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [m1.id, m2.id, m3.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const items = within(mediumGroup).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('M1 pending'),
+      expect.stringContaining('M2 completed'),
+      expect.stringContaining('M3 pending'),
+    ])
+
+    const completedName = within(mediumGroup).getByText('M2 completed')
+    expect(completedName.tagName).toBe('S')
+  })
+})
+
+describe('Today and Completed offer no reordering, and Completed ignores place (9.5)', () => {
+  it('shows no reordering control in Today or Completed, and keeps Completed ordered by recency even when place values disagree', async () => {
+    const completedRecent = makeTask({
+      id: 'completed-recent',
+      name: 'Completed recent',
+      completedAt: new Date('2026-08-18T09:00:00.000Z'),
+      // A higher place than the earlier-completed task below, to prove
+      // Completed does not consult `place` even though every task now
+      // carries one.
+      place: 9,
+    })
+    const completedEarlier = makeTask({
+      id: 'completed-earlier',
+      name: 'Completed earlier',
+      completedAt: new Date('2026-08-18T07:00:00.000Z'),
+      place: 0,
+    })
+    const pending = makeTask({
+      id: 'pending',
+      name: 'Pending medium',
+      priority: 'medium',
+      place: 1,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([completedRecent, completedEarlier, pending])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [pending.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    expect(
+      within(todaySection).queryByRole('button', { name: 'Reorder' }),
+    ).toBeNull()
+
+    switchTab('Completed')
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    expect(
+      within(completedSection).queryByRole('button', { name: 'Reorder' }),
+    ).toBeNull()
+
+    const items = within(completedSection).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('Completed recent'),
+      expect.stringContaining('Completed earlier'),
+    ])
   })
 })
 
