@@ -49,13 +49,13 @@
 
 ## 8. UI — the drag and its keyboard equivalent
 
-- [ ] 8.1 Write a failing test that every pending row in the All tab exposes a reordering control carrying an accessible name, then add the drag handle as a dedicated element so the drag starts only from it
-- [ ] 8.2 Wire a single `DndContext` over the All tab with one `SortableContext` per priority group, registering `PointerSensor` at `distance: 8` and `TouchSensor` at `delay: 250, tolerance: 5`; write a failing test that a drag end reporting two ids of the same priority reorders through the domain function
-- [ ] 8.3 Write a failing test that a drag end reporting an `over` target in a different priority group changes no task's place and no task's priority
-- [ ] 8.4 Write a failing test that an abandoned drag — a drag end with no `over` target — leaves every place unchanged
-- [ ] 8.5 Register `KeyboardSensor` with `sortableKeyboardCoordinates` and write a failing test that a keyboard move produces the same order a drag to that position would
-- [ ] 8.6 Write a failing test that a keyboard move past the last position of a priority group leaves the task at that last position with its priority unchanged
-- [ ] 8.7 Enable dnd-kit's screen-reader announcements for the reordering, and write a failing test that a completed move is announced through the live region
+- [x] 8.1 Write a failing test that every pending row in the All tab exposes a reordering control carrying an accessible name, then add the drag handle as a dedicated element so the drag starts only from it
+- [x] 8.2 Wire a single `DndContext` over the All tab with one `SortableContext` per priority group, registering `PointerSensor` at `distance: 8` and `TouchSensor` at `delay: 250, tolerance: 5`; write a failing test that a drag end reporting two ids of the same priority reorders through the domain function
+- [x] 8.3 Write a failing test that a drag end reporting an `over` target in a different priority group changes no task's place and no task's priority
+- [x] 8.4 Write a failing test that an abandoned drag — a drag end with no `over` target — leaves every place unchanged
+- [x] 8.5 Register `KeyboardSensor` with `sortableKeyboardCoordinates` and write a failing test that a keyboard move produces the same order a drag to that position would
+- [x] 8.6 Write a failing test that a keyboard move past the last position of a priority group leaves the task at that last position with its priority unchanged
+- [x] 8.7 Enable dnd-kit's screen-reader announcements for the reordering, and write a failing test that a completed move is announced through the live region
 
 ## 9. UI — Today, Completed, and feedback
 

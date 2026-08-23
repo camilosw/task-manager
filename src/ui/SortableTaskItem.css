@@ -1,0 +1,17 @@
+/**
+ * The All tab's drag handle (see SortableTaskItem.tsx). Reuses
+ * `.task-row__icon-button`'s sizing and border from TaskItem.css so it
+ * matches the row's existing edit/delete controls; `touch-action: none` is
+ * what stops a held press on the handle from also trying to scroll the page
+ * (see design.md, decision 6 — the `TouchSensor`'s own delay/tolerance
+ * handle the pointer side of that same disambiguation).
+ */
+
+.task-row__handle {
+  touch-action: none;
+  cursor: grab;
+}
+
+.task-row__handle:active {
+  cursor: grabbing;
+}

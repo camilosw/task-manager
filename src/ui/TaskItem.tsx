@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { formatDuration } from '../domain/duration'
 import type {
   EditTaskInput,
@@ -16,6 +16,20 @@ export type TaskItemProps = {
   onEdit: (id: string, input: EditTaskInput) => Promise<EditTaskResult>
   onDelete: (id: string) => Promise<void>
   onComplete: (id: string) => Promise<void>
+  /** A reordering control to render alongside the row's existing checkbox,
+   * duration, priority, edit and delete elements — only ever supplied by
+   * `SortableTaskItem`, which wires it up with dnd-kit's sortable listeners
+   * (see specs/task-views/spec.md, "Tasks are reordered in the All tab
+   * only"). `TaskItem` itself stays ignorant of dnd-kit: it only renders
+   * whatever node it is given, which is how the Today and Completed tabs —
+   * which never pass this prop — keep showing no reordering control at all
+   * (see "The other tabs offer no reordering"). */
+  dragHandle?: ReactNode
+  /** The row's own DOM node ref and inline style, supplied by
+   * `SortableTaskItem` so dnd-kit can measure and transform the row while
+   * dragging. Both are `undefined`, and so no-ops, everywhere else. */
+  rootRef?: (node: HTMLLIElement | null) => void
+  rootStyle?: CSSProperties
 }
 
 /**
@@ -48,6 +62,9 @@ export function TaskItem({
   onEdit,
   onDelete,
   onComplete,
+  dragHandle,
+  rootRef,
+  rootStyle,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const nameId = useId()
@@ -73,7 +90,12 @@ export function TaskItem({
 
   if (isEditing) {
     return (
-      <li className="task-row task-row--editing">
+      <li
+        className="task-row task-row--editing"
+        ref={rootRef}
+        style={rootStyle}
+        data-task-id={task.id}
+      >
         <TaskForm
           heading={`Edit "${task.name}"`}
           submitLabel="Save"
@@ -92,7 +114,13 @@ export function TaskItem({
   const isCompleted = task.completedAt !== null
 
   return (
-    <li className="task-row">
+    <li
+      className="task-row"
+      ref={rootRef}
+      style={rootStyle}
+      data-task-id={task.id}
+    >
+      {dragHandle}
       <input
         type="checkbox"
         className="task-row__checkbox"

@@ -37,6 +37,21 @@ function switchTab(name: 'Today' | 'All' | 'Completed') {
   fireEvent.click(screen.getByRole('button', { name }))
 }
 
+/** The app's own confirmation region (design.md, decision 7), disambiguated
+ * from dnd-kit's own `role="status"` live region — mounted alongside it
+ * whenever the All tab is in view, once section 8 wires a `DndContext`
+ * there (see specs/task-views/spec.md, "the outcome of a completed move is
+ * conveyed to assistive technology"). The two are told apart by
+ * `aria-live`: this app's region is `polite` (TaskManagerApp.tsx); dnd-kit's
+ * is `assertive`. */
+function getFeedbackRegion(): HTMLElement {
+  const region = screen
+    .getAllByRole('status')
+    .find((element) => element.getAttribute('aria-live') === 'polite')
+  if (!region) throw new Error('expected the app feedback region')
+  return region
+}
+
 /** Opens the creation sheet from the add-task control and returns its
  * duration and priority groups, which several tests need directly. */
 function openCreateForm() {
@@ -336,7 +351,7 @@ describe('the feedback region is always mounted (4.2)', () => {
     // Captured before any action: decision 7's whole point is that this is
     // the same node whose text later changes, not a node that shows up
     // once there is something to say.
-    const region = screen.getByRole('status')
+    const region = getFeedbackRegion()
     expect(region.textContent).toBe('')
 
     createTaskViaForm('Task A', '30m', 'Medium')
@@ -344,7 +359,7 @@ describe('the feedback region is always mounted (4.2)', () => {
     await waitFor(() => {
       expect(region.textContent).toBe('Task added')
     })
-    expect(screen.getByRole('status')).toBe(region)
+    expect(getFeedbackRegion()).toBe(region)
   })
 })
 
@@ -408,7 +423,7 @@ describe('action feedback follows every completed action (4.3)', () => {
 
     expect(await screen.findByText('Name is required.')).toBeTruthy()
     expect(screen.queryByText('Task added')).toBeNull()
-    expect(screen.getByRole('status').textContent).toBe('')
+    expect(getFeedbackRegion().textContent).toBe('')
   })
 })
 

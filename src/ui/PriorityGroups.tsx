@@ -10,6 +10,9 @@ export type PriorityGroupsProps = {
   onEdit: (id: string, input: EditTaskInput) => Promise<EditTaskResult>
   onDelete: (id: string) => Promise<void>
   onComplete: (id: string) => Promise<void>
+  /** Forwarded to each group's `TaskList` (see TaskList.tsx). Only the All
+   * tab passes this; Today omits it and renders exactly as before. */
+  reorderable?: boolean
 }
 
 /**
@@ -41,6 +44,7 @@ export function PriorityGroups({
   onEdit,
   onDelete,
   onComplete,
+  reorderable,
 }: PriorityGroupsProps) {
   const groups = PRIORITIES.map((priority) => ({
     priority,
@@ -78,6 +82,7 @@ export function PriorityGroups({
             onEdit={onEdit}
             onDelete={onDelete}
             onComplete={onComplete}
+            reorderable={reorderable}
           />
         </section>
       ))}
