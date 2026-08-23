@@ -29,11 +29,11 @@
 
 ## 5. Persistence — round-trip and upgrade
 
-- [ ] 5.1 Extend the shared contract suite with a failing test that `place` round-trips through a save and load, then implement it in both the in-memory and IndexedDB repositories
-- [ ] 5.2 Write a failing contract test that tasks stored without a place are given places in creation order on first read, so the All tab shows the same B, E, C, A, D order it showed before, then implement the version-2 `onupgradeneeded` and bump `DB_VERSION`
-- [ ] 5.3 Write a failing contract test that the upgrade sorts on `createdAt` alone and not on priority-then-age, by upgrading a fixture whose oldest task has the lowest priority and then promoting it, asserting it lands first among its new peers
-- [ ] 5.4 Write a failing contract test that reopening after the upgrade leaves the places untouched, and that data already carrying places is never reassigned
-- [ ] 5.5 Write a failing contract test that the upgrade neither reads nor writes the snapshot store, and that opening at version 2 with empty stores is a no-op
+- [x] 5.1 Extend the shared contract suite with a failing test that `place` round-trips through a save and load, then implement it in both the in-memory and IndexedDB repositories
+- [x] 5.2 Write a failing contract test that tasks stored without a place are given places in creation order on first read, so the All tab shows the same B, E, C, A, D order it showed before, then implement the version-2 `onupgradeneeded` and bump `DB_VERSION`
+- [x] 5.3 Write a failing contract test that the upgrade sorts on `createdAt` alone and not on priority-then-age, by upgrading a fixture whose oldest task has the lowest priority and then promoting it, asserting it lands first among its new peers
+- [x] 5.4 Write a failing contract test that reopening after the upgrade leaves the places untouched, and that data already carrying places is never reassigned
+- [x] 5.5 Write a failing contract test that the upgrade neither reads nor writes the snapshot store, and that opening at version 2 with empty stores is a no-op
 
 ## 6. Application state
 

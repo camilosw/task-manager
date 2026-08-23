@@ -11,7 +11,7 @@ import type { Repository, RepositoryData } from './repository'
  * user's data would appear to have vanished.
  */
 export const DB_NAME = 'task-manager'
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 const TASKS_STORE = 'tasks'
 const SNAPSHOT_STORE = 'snapshot'
@@ -22,17 +22,59 @@ export type IndexedDbRepositoryOptions = {
   version?: number
 }
 
+/**
+ * The version-2 upgrade (see design.md, decision 9, and
+ * specs/offline-storage/spec.md, "Data stored before manual ordering keeps
+ * the order it already showed"): every task stored by version 1, which
+ * carries no `place`, is given one by sorting on `createdAt` ascending and
+ * writing back `place = 0, 1, 2, …` in that order. Sorting on `createdAt`
+ * alone — not on `(priority, createdAt)` — is deliberate: it reproduces the
+ * order every list already displayed, and it is the assignment that later
+ * lets a task promoted to a new priority level land among its new peers by
+ * age, exactly as if it had never been touched by the upgrade.
+ *
+ * Runs inside the versionchange transaction `onupgradeneeded` already holds
+ * open, so it commits atomically with the object-store creation above it.
+ * The snapshot store is never touched here — the upgrade only reads and
+ * writes `TASKS_STORE`.
+ */
+function assignPlacesByCreationOrder(transaction: IDBTransaction): void {
+  const store = transaction.objectStore(TASKS_STORE)
+  const getAllRequest = store.getAll() as IDBRequest<Task[]>
+
+  getAllRequest.onsuccess = () => {
+    const tasks = [...getAllRequest.result].sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+    tasks.forEach((task, index) => {
+      store.put({ ...task, place: index })
+    })
+  }
+}
+
 function openDatabase(dbName: string, version: number): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbName, version)
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result
       if (!db.objectStoreNames.contains(TASKS_STORE)) {
         db.createObjectStore(TASKS_STORE, { keyPath: 'id' })
       }
       if (!db.objectStoreNames.contains(SNAPSHOT_STORE)) {
         db.createObjectStore(SNAPSHOT_STORE)
+      }
+
+      // Only a database that already existed at version 1 can hold tasks
+      // written before `place` existed. A brand-new database — `oldVersion`
+      // 0 — has just had its stores created above and is empty, so the
+      // migration would be a no-op anyway; skipping it for that case keeps
+      // a fresh install from ever being said to have run an upgrade at all
+      // (see specs/offline-storage/spec.md, "First launch with no stored
+      // data needs no upgrade").
+      if (event.oldVersion === 1) {
+        assignPlacesByCreationOrder(request.transaction as IDBTransaction)
       }
     }
 
