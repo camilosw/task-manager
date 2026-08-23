@@ -4,6 +4,7 @@ import type { CreateTaskResult } from '../domain/task'
 import { useAppState } from './useAppState'
 import type { AppState, CreateTaskFormInput } from './appStateContext'
 import { CreateTaskSheet } from './CreateTaskSheet'
+import { PriorityGroups } from './PriorityGroups'
 import { TaskList } from './TaskList'
 import { TodayTab } from './TodayTab'
 import { ThemeToggle } from './ThemeToggle'
@@ -100,10 +101,14 @@ export function TaskManagerApp() {
   const pendingTasks = state.tasks.filter((task) => task.completedAt === null)
   const completedTasks = state.tasks.filter((task) => task.completedAt !== null)
 
-  // The All tab lists every pending task ordered by priority then age (see
-  // specs/task-views/spec.md, "The All tab orders by priority then age").
-  // `compareForSelection` is exactly that ordering, with no dependency on
-  // today's snapshot, so it is reused directly rather than reimplemented.
+  // The All tab groups every pending task under priority headings (see
+  // specs/task-views/spec.md, "The All tab groups tasks by priority"),
+  // ordered within each group by priority then place (see "The All tab
+  // orders by priority then age"). `compareForSelection` is exactly that
+  // ordering, with no dependency on today's snapshot, so it is reused
+  // directly rather than reimplemented — sorting the flat list before
+  // handing it to `PriorityGroups` produces the same per-group order as
+  // sorting each group independently would (see TodayTab.tsx).
   const allTasks = [...pendingTasks].sort(compareForSelection)
 
   // The Completed tab lists every completed task, most recently completed
@@ -181,7 +186,7 @@ export function TaskManagerApp() {
       {activeTab === 'all' && (
         <section aria-label="All tasks" className="app__panel">
           <h2 className="sr-only">All</h2>
-          <TaskList
+          <PriorityGroups
             tasks={allTasks}
             onEdit={state.editTask}
             onDelete={handleDelete}

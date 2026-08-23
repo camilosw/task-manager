@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { AppStateProvider } from './AppStateProvider'
 import { TaskManagerApp } from './TaskManagerApp'
+import { useAppState } from './useAppState'
 import { createInMemoryRepository } from '../persistence/inMemoryRepository'
 import type { Repository } from '../persistence/repository'
 import type { Task } from '../domain/task'
@@ -15,6 +22,7 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     duration: 30,
     priority: 'medium',
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
+    place: 0,
     completedAt: null,
     ...overrides,
   }
@@ -160,45 +168,127 @@ describe('Today tab grouping (9.2)', () => {
   })
 })
 
+describe('shared priority-group rendering (7.1)', () => {
+  it("pins the Today tab's grouped output — headings, markers, and hidden empty groups — across the extraction into a shared component", async () => {
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+    const mediumOlder = makeTask({
+      id: 'medium-older',
+      name: 'Medium older',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+    })
+    const mediumNewer = makeTask({
+      id: 'medium-newer',
+      name: 'Medium newer',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgent, mediumOlder, mediumNewer])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [urgent.id, mediumOlder.id, mediumNewer.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+
+    // Only urgent and medium headings appear, in priority order — high, low
+    // and very low have no tasks in the plan and are hidden entirely,
+    // heading included.
+    const headings = within(todaySection).getAllByRole('heading', {
+      level: 3,
+    })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Urgent',
+      'Medium',
+    ])
+    expect(
+      within(todaySection).queryByRole('heading', { name: 'High' }),
+    ).toBeNull()
+    expect(
+      within(todaySection).queryByRole('heading', { name: 'Low' }),
+    ).toBeNull()
+    expect(
+      within(todaySection).queryByRole('heading', { name: 'Very low' }),
+    ).toBeNull()
+
+    // Each heading is paired with a colour marker carrying the group's
+    // priority as data, a sibling of the heading rather than nested inside
+    // its text.
+    const urgentGroup = screen.getByRole('region', { name: 'Urgent' })
+    const urgentMarker = urgentGroup.querySelector('[aria-hidden="true"]')
+    expect(urgentMarker?.getAttribute('data-priority')).toBe('urgent')
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const mediumMarker = mediumGroup.querySelector('[aria-hidden="true"]')
+    expect(mediumMarker?.getAttribute('data-priority')).toBe('medium')
+
+    // Ordering within a group is unaffected by the extraction: oldest first.
+    const mediumItems = within(mediumGroup).getAllByRole('listitem')
+    expect(mediumItems.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('Medium older'),
+      expect.stringContaining('Medium newer'),
+    ])
+  })
+})
+
 describe('All tab ordering (9.3)', () => {
   it('orders every pending task by priority then age, excluding completed tasks', async () => {
     // The worked example from specs/task-views/spec.md, "The All tab orders
-    // by priority then age".
+    // by priority then age" — places assigned matching creation order, so
+    // this pins that a user who has never reordered anything sees exactly
+    // what they saw before `place` existed (see tasks.md, 3.2).
     const taskA = makeTask({
       id: 'A',
       name: 'A',
       priority: 'medium',
       createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 3,
     })
     const taskB = makeTask({
       id: 'B',
       name: 'B',
       priority: 'urgent',
       createdAt: new Date('2026-08-18T11:00:00.000Z'),
+      place: 4,
     })
     const taskC = makeTask({
       id: 'C',
       name: 'C',
       priority: 'medium',
       createdAt: new Date('2026-08-18T08:00:00.000Z'),
+      place: 2,
     })
     const taskD = makeTask({
       id: 'D',
       name: 'D',
       priority: 'very-low',
       createdAt: new Date('2026-08-18T07:00:00.000Z'),
+      place: 1,
     })
     const taskE = makeTask({
       id: 'E',
       name: 'E',
       priority: 'high',
       createdAt: new Date('2026-08-18T12:00:00.000Z'),
+      place: 5,
     })
     const completed = makeTask({
       id: 'done',
       name: 'Already done',
       priority: 'urgent',
       createdAt: new Date('2026-08-18T06:00:00.000Z'),
+      place: 0,
       completedAt: new Date('2026-08-18T07:30:00.000Z'),
     })
 
@@ -224,6 +314,180 @@ describe('All tab ordering (9.3)', () => {
       expect.stringContaining('D'),
     ])
     expect(within(allSection).queryByText('Already done')).toBeNull()
+  })
+})
+
+describe('the All tab groups tasks by priority (7.2)', () => {
+  it('renders pending tasks under priority headings in the fixed order, omitting a heading for a level with no pending tasks', async () => {
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      place: 0,
+    })
+    const mediumOne = makeTask({
+      id: 'medium-1',
+      name: 'Medium one',
+      priority: 'medium',
+      place: 1,
+    })
+    const mediumTwo = makeTask({
+      id: 'medium-2',
+      name: 'Medium two',
+      priority: 'medium',
+      place: 2,
+    })
+    const low = makeTask({
+      id: 'low-1',
+      name: 'Low task',
+      priority: 'low',
+      place: 3,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgent, mediumOne, mediumTwo, low])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const headings = within(allSection).getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Urgent',
+      'Medium',
+      'Low',
+    ])
+    expect(
+      within(allSection).queryByRole('heading', { name: 'High' }),
+    ).toBeNull()
+    expect(
+      within(allSection).queryByRole('heading', { name: 'Very low' }),
+    ).toBeNull()
+
+    const urgentGroup = within(allSection).getByRole('region', {
+      name: 'Urgent',
+    })
+    expect(within(urgentGroup).getByText('Urgent task')).toBeTruthy()
+
+    const mediumGroup = within(allSection).getByRole('region', {
+      name: 'Medium',
+    })
+    expect(within(mediumGroup).getByText('Medium one')).toBeTruthy()
+    expect(within(mediumGroup).getByText('Medium two')).toBeTruthy()
+
+    const lowGroup = within(allSection).getByRole('region', { name: 'Low' })
+    expect(within(lowGroup).getByText('Low task')).toBeTruthy()
+  })
+
+  it('shows the empty state with no priority headings when nothing is pending', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).getByText('empty')).toBeTruthy()
+    expect(within(allSection).queryAllByRole('heading', { level: 3 })).toEqual(
+      [],
+    )
+  })
+})
+
+describe('tasks within an All tab group are ordered by place (7.3)', () => {
+  /** Calls `reorderTasks` directly against the shared `AppStateProvider`,
+   * without any drag interaction — the drag gesture and its keyboard
+   * equivalent are section 8's job. This only needs to prove that once a
+   * reordering has happened, the All tab's grouped rendering (7.2) reflects
+   * the new places. */
+  function ReorderTrigger({
+    activeId,
+    overId,
+  }: {
+    activeId: string
+    overId: string
+  }) {
+    const state = useAppState()
+    if (state.status !== 'loaded') return null
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          void state.reorderTasks(activeId, overId)
+        }}
+      >
+        Test reorder
+      </button>
+    )
+  }
+
+  it('orders tasks within a group by place, and reflects a reordering', async () => {
+    const mediumFirst = makeTask({
+      id: 'medium-first',
+      name: 'Medium first',
+      priority: 'medium',
+      place: 0,
+    })
+    const mediumSecond = makeTask({
+      id: 'medium-second',
+      name: 'Medium second',
+      priority: 'medium',
+      place: 1,
+    })
+    const mediumThird = makeTask({
+      id: 'medium-third',
+      name: 'Medium third',
+      priority: 'medium',
+      place: 2,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([mediumFirst, mediumSecond, mediumThird])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    render(
+      <AppStateProvider repository={repository} now={() => FIXED_NOW}>
+        <TaskManagerApp />
+        <ReorderTrigger activeId="medium-third" overId="medium-first" />
+      </AppStateProvider>,
+    )
+    await waitForLoaded()
+    switchTab('All')
+
+    const mediumGroupBefore = screen.getByRole('region', { name: 'Medium' })
+    expect(
+      within(mediumGroupBefore)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      expect.stringContaining('Medium first'),
+      expect.stringContaining('Medium second'),
+      expect.stringContaining('Medium third'),
+    ])
+
+    // Moves medium-third to the position medium-first currently holds.
+    fireEvent.click(screen.getByRole('button', { name: 'Test reorder' }))
+
+    await waitFor(() => {
+      const mediumGroupAfter = screen.getByRole('region', { name: 'Medium' })
+      expect(
+        within(mediumGroupAfter)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual([
+        expect.stringContaining('Medium third'),
+        expect.stringContaining('Medium first'),
+        expect.stringContaining('Medium second'),
+      ])
+    })
   })
 })
 

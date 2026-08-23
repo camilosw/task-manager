@@ -43,9 +43,9 @@
 
 ## 7. UI — the All tab becomes grouped
 
-- [ ] 7.1 Extract `TodayTab`'s priority-group rendering — heading, colour marker, hidden empty groups — into a component both tabs use, with a test pinning that the Today tab's output is unchanged by the extraction
-- [ ] 7.2 Write a failing test that the All tab renders its pending tasks under priority headings in the fixed order, omits a heading for a level with no pending tasks, and still shows its empty state with no headings when nothing is pending, then render it through the shared component
-- [ ] 7.3 Write a failing test that tasks within an All tab group appear in place order, and that a reordering is reflected there
+- [x] 7.1 Extract `TodayTab`'s priority-group rendering — heading, colour marker, hidden empty groups — into a component both tabs use, with a test pinning that the Today tab's output is unchanged by the extraction
+- [x] 7.2 Write a failing test that the All tab renders its pending tasks under priority headings in the fixed order, omits a heading for a level with no pending tasks, and still shows its empty state with no headings when nothing is pending, then render it through the shared component
+- [x] 7.3 Write a failing test that tasks within an All tab group appear in place order, and that a reordering is reflected there
 
 ## 8. UI — the drag and its keyboard equivalent
 
