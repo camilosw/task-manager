@@ -37,9 +37,9 @@
 
 ## 6. Application state
 
-- [ ] 6.1 Write a failing provider test that a newly created task is assigned `nextPlace` over the current tasks, so it appears last among its priority level, then wire it into `createTask`
-- [ ] 6.2 Write a failing provider test that a reorder action passes through `reorderWithinPriority` and persists the whole task list afterwards, then add the action to the reducer and the context
-- [ ] 6.3 Write a failing provider test that a reorder leaves the snapshot untouched and writes no snapshot, so the day's membership cannot change as a side effect
+- [x] 6.1 Write a failing provider test that a newly created task is assigned `nextPlace` over the current tasks, so it appears last among its priority level, then wire it into `createTask`
+- [x] 6.2 Write a failing provider test that a reorder action passes through `reorderWithinPriority` and persists the whole task list afterwards, then add the action to the reducer and the context
+- [x] 6.3 Write a failing provider test that a reorder leaves the snapshot untouched and writes no snapshot, so the day's membership cannot change as a side effect
 
 ## 7. UI — the All tab becomes grouped
 

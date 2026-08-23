@@ -37,6 +37,14 @@ export type CreateTaskFormInput = {
  * specs/daily-plan/spec.md, "Manual recalculation"): it rebuilds the
  * snapshot from scratch against the currently pending tasks, regardless of
  * the stored date, via `recomputeSnapshot`.
+ *
+ * `reorderTasks` passes `activeId`/`overId` straight through to the domain's
+ * `reorderWithinPriority` and persists the resulting task list (see
+ * specs/task-management/spec.md, "Reordering a task within its priority
+ * level"). It never touches the snapshot: reordering changes no task's id,
+ * so the snapshot — which records ids, not copied task values — cannot go
+ * stale as a side effect (see design.md, decision 5, and
+ * specs/daily-plan/spec.md, "A reordering waits for the next computation").
  */
 export type AppState =
   | { status: 'loading' }
@@ -49,6 +57,7 @@ export type AppState =
       deleteTask: (id: string) => Promise<void>
       completeTask: (id: string) => Promise<void>
       recalculateToday: () => Promise<void>
+      reorderTasks: (activeId: string, overId: string) => Promise<void>
     }
 
 /**

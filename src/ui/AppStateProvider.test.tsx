@@ -3,7 +3,12 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { createInMemoryRepository } from '../persistence/inMemoryRepository'
 import type { Repository } from '../persistence/repository'
-import type { CreateTaskResult, EditTaskResult, Task } from '../domain/task'
+import {
+  reorderWithinPriority,
+  type CreateTaskResult,
+  type EditTaskResult,
+  type Task,
+} from '../domain/task'
 import { recomputeSnapshot, type DaySnapshot } from '../domain/snapshot'
 import { AppStateProvider } from './AppStateProvider'
 import { useAppState } from './useAppState'
@@ -25,6 +30,7 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     duration: 30,
     priority: 'medium',
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
+    place: 0,
     completedAt: null,
     ...overrides,
   }
@@ -107,6 +113,38 @@ describe('useAppState mutations', () => {
     assertLoaded(result.current)
     expect(result.current.tasks).toEqual([createResult.task])
     expect(saveTasksSpy).toHaveBeenLastCalledWith([createResult.task])
+  })
+
+  it('assigns a newly created task the next place, after every existing task, regardless of priority', async () => {
+    const existing = [
+      makeTask({ id: 'task-1', priority: 'medium', place: 3 }),
+      makeTask({ id: 'task-2', priority: 'high', place: 7 }),
+    ]
+    const repository = createInMemoryRepository()
+    await repository.saveTasks(existing)
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+
+    let createResult!: CreateTaskResult
+    await act(async () => {
+      assertLoaded(result.current)
+      createResult = await result.current.createTask({
+        name: 'Write the report',
+        duration: 30,
+        priority: 'medium',
+      })
+    })
+
+    expect(createResult.ok).toBe(true)
+    if (!createResult.ok) return
+    // nextPlace(existing) is one past the highest existing place (7), so the
+    // new task sorts after every task of every priority, and in particular
+    // after task-1, the other medium task (see
+    // specs/task-management/spec.md, "A new task takes the last place in
+    // the order").
+    expect(createResult.task.place).toBe(8)
+    assertLoaded(result.current)
+    expect(result.current.tasks).toEqual([...existing, createResult.task])
   })
 
   it('rejects an invalid creation without mutating state or persisting anything', async () => {
@@ -335,6 +373,61 @@ describe('useAppState mutations', () => {
     // Completion never changes snapshot membership (see design.md, "The
     // non-urgent selection is frozen for the day") — only the tasks record
     // changes, so no snapshot save should follow a completion.
+    expect(saveSnapshotSpy).not.toHaveBeenCalled()
+  })
+
+  it('reorders tasks through the domain reorderWithinPriority function and persists the resulting tasks', async () => {
+    const taskA = makeTask({ id: 'task-a', priority: 'medium', place: 0 })
+    const taskB = makeTask({ id: 'task-b', priority: 'medium', place: 1 })
+    const taskC = makeTask({ id: 'task-c', priority: 'medium', place: 2 })
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([taskA, taskB, taskC])
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+    const saveTasksSpy = vi.spyOn(repository, 'saveTasks')
+
+    await act(async () => {
+      assertLoaded(result.current)
+      await result.current.reorderTasks('task-c', 'task-a')
+    })
+
+    const expectedTasks = reorderWithinPriority(
+      [taskA, taskB, taskC],
+      'task-c',
+      'task-a',
+    )
+    assertLoaded(result.current)
+    expect(result.current.tasks).toEqual(expectedTasks)
+    expect(saveTasksSpy).toHaveBeenLastCalledWith(expectedTasks)
+  })
+
+  it('leaves the snapshot untouched and persists no snapshot when reordering', async () => {
+    const taskA = makeTask({ id: 'task-a', priority: 'medium', place: 0 })
+    const taskB = makeTask({ id: 'task-b', priority: 'medium', place: 1 })
+    const existingSnapshot: DaySnapshot = {
+      date: '2026-08-17',
+      plannedIds: ['task-a', 'task-b'],
+      admittedIds: [],
+    }
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([taskA, taskB])
+    await repository.saveSnapshot(existingSnapshot)
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+    const saveSnapshotSpy = vi.spyOn(repository, 'saveSnapshot')
+
+    await act(async () => {
+      assertLoaded(result.current)
+      await result.current.reorderTasks('task-b', 'task-a')
+    })
+
+    assertLoaded(result.current)
+    // Reordering changes no id, so the snapshot — which holds ids, not
+    // copied task values — cannot go stale as a side effect (see design.md,
+    // decision 5, and specs/daily-plan/spec.md, "A reordering waits for the
+    // next computation"). Nothing about the day's membership should change,
+    // and nothing should be written to the snapshot store at all.
+    expect(result.current.snapshot).toEqual(existingSnapshot)
     expect(saveSnapshotSpy).not.toHaveBeenCalled()
   })
 })
