@@ -21,11 +21,11 @@
 
 ## 4. Domain — the daily plan under the new order
 
-- [ ] 4.1 Write a failing test for the eviction trace: the plan is H1, M1, M2 at 75 minutes, and after M3 is moved above M1 the next computation yields H1, M3, M1 at 65 minutes with M2 excluded while still pending
-- [ ] 4.2 Write a failing test that urgent tasks are invariant under reordering — U1, U2 and U3 all enter in any arrangement, the running total after them is 75 in every one, and H1 is excluded at 10 minutes
-- [ ] 4.3 Write a failing test that reordering a level wholly inside the plan changes neither its composition nor its planned total, using the H1/H2/M1 example that reaches 65 either way
-- [ ] 4.4 Write a failing test that reordering a level wholly outside the plan changes nothing, using the low level reached at a running total of 65
-- [ ] 4.5 Re-run the three pre-existing selection examples — the overshoot, the exact boundary, and the urgent-only day — with places matching creation order, confirming each still produces its documented result
+- [x] 4.1 Write a failing test for the eviction trace: the plan is H1, M1, M2 at 75 minutes, and after M3 is moved above M1 the next computation yields H1, M3, M1 at 65 minutes with M2 excluded while still pending
+- [x] 4.2 Write a failing test that urgent tasks are invariant under reordering — U1, U2 and U3 all enter in any arrangement, the running total after them is 75 in every one, and H1 is excluded at 10 minutes
+- [x] 4.3 Write a failing test that reordering a level wholly inside the plan changes neither its composition nor its planned total, using the H1/H2/M1 example that reaches 65 either way
+- [x] 4.4 Write a failing test that reordering a level wholly outside the plan changes nothing, using the low level reached at a running total of 65
+- [x] 4.5 Re-run the three pre-existing selection examples — the overshoot, the exact boundary, and the urgent-only day — with places matching creation order, confirming each still produces its documented result
 
 ## 5. Persistence — round-trip and upgrade
 

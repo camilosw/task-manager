@@ -118,9 +118,9 @@ Given five pending tasks, none urgent, arranged in the order listed. The plan co
 | #   | Place | Task | Priority | Duration | Total before | Rule applied   | Included | Total after |
 | --- | ----- | ---- | -------- | -------- | ------------ | -------------- | -------- | ----------- |
 | 1   | 1     | H1   | high     | 30m      | 0            | 0 < 60         | yes      | 30          |
-| 2   | 2     | M1   | medium   | 20m      | 30           | 30 < 60        | yes      | 50          |
-| 3   | 3     | M2   | medium   | 25m      | 50           | 50 < 60        | yes      | 75          |
-| 4   | 4     | M3   | medium   | 15m      | 75           | 75 is not < 60 | **no**   | 75          |
+| 2   | 2     | M1   | medium   | 15m      | 30           | 30 < 60        | yes      | 45          |
+| 3   | 3     | M2   | medium   | 30m      | 45           | 45 < 60        | yes      | 75          |
+| 4   | 4     | M3   | medium   | 20m      | 75           | 75 is not < 60 | **no**   | 75          |
 | 5   | 5     | L1   | low      | 10m      | 75           | 75 is not < 60 | **no**   | 75          |
 
 The Today tab therefore contains H1, M1, and M2. The user then moves M3 above M1, so the medium tasks are arranged M3, M1, M2 in places 2, 3, and 4.
@@ -133,9 +133,9 @@ The Today tab therefore contains H1, M1, and M2. The user then moves M3 above M1
 | #   | Place | Task | Priority | Duration | Total before | Rule applied   | Included | Total after |
 | --- | ----- | ---- | -------- | -------- | ------------ | -------------- | -------- | ----------- |
 | 1   | 1     | H1   | high     | 30m      | 0            | 0 < 60         | yes      | 30          |
-| 2   | 2     | M3   | medium   | 15m      | 30           | 30 < 60        | yes      | 45          |
-| 3   | 3     | M1   | medium   | 20m      | 45           | 45 < 60        | yes      | 65          |
-| 4   | 4     | M2   | medium   | 25m      | 65           | 65 is not < 60 | **no**   | 65          |
+| 2   | 2     | M3   | medium   | 20m      | 30           | 30 < 60        | yes      | 50          |
+| 3   | 3     | M1   | medium   | 15m      | 50           | 50 < 60        | yes      | 65          |
+| 4   | 4     | M2   | medium   | 30m      | 65           | 65 is not < 60 | **no**   | 65          |
 | 5   | 5     | L1   | low      | 10m      | 65           | 65 is not < 60 | **no**   | 65          |
 
 - **AND** the plan contains H1, M3, and M1
@@ -152,9 +152,9 @@ Given four pending tasks whose urgent tasks alone approach the budget:
 
 | Place | Task | Priority | Duration |
 | ----- | ---- | -------- | -------- |
-| 1     | U1   | urgent   | 25m      |
+| 1     | U1   | urgent   | 30m      |
 | 2     | U2   | urgent   | 30m      |
-| 3     | U3   | urgent   | 20m      |
+| 3     | U3   | urgent   | 15m      |
 | 4     | H1   | high     | 10m      |
 
 - **WHEN** the user reorders the urgent tasks in any arrangement and the plan is computed
