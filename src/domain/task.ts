@@ -5,6 +5,13 @@ import type { Priority } from './priority'
  * A single task. `createdAt` is fixed at creation and never changes;
  * `completedAt` is `null` while the task is pending and is set to the
  * moment of completion (see specs/task-management/spec.md).
+ *
+ * `place` is the task's position in the user-arranged order: a single
+ * sequence spanning every task, regardless of priority, that is only ever
+ * compared, never interpreted (see design.md, decision 2). It is assigned
+ * at creation and changes only when the user reorders tasks — editing or
+ * completing a task leaves it untouched (see specs/task-management/spec.md,
+ * "Task attributes").
  */
 export type Task = {
   id: string
@@ -12,6 +19,7 @@ export type Task = {
   duration: Duration
   priority: Priority
   createdAt: Date
+  place: number
   completedAt: Date | null
 }
 
@@ -27,6 +35,7 @@ export type CreateTaskInput = {
   name: string
   duration: Duration | undefined
   priority: Priority | undefined
+  place: number
 }
 
 export type CreateTaskResult =
@@ -36,7 +45,9 @@ export type CreateTaskResult =
  * Creates a task, validating that the name is non-empty once trimmed and
  * that a duration and a priority were both selected. `now` is injected
  * rather than read from the system clock, so creation stays deterministic
- * (see design.md, decision 2) — it becomes the task's `createdAt`.
+ * (see design.md, decision 2) — it becomes the task's `createdAt`. `place`
+ * is recorded as given, the same way `id` is: the caller is responsible for
+ * computing it (typically via `nextPlace`) before calling `createTask`.
  */
 export function createTask(
   input: CreateTaskInput,
@@ -67,9 +78,27 @@ export function createTask(
       duration: input.duration as Duration,
       priority: input.priority as Priority,
       createdAt: now,
+      place: input.place,
       completedAt: null,
     },
   }
+}
+
+/**
+ * The place a newly created task should take: one past the highest place
+ * currently held by any task, or the first place (`0`) when there are no
+ * tasks yet. Because `place` is a single sequence spanning every priority
+ * level (see design.md, decision 2), a task assigned this place is greater
+ * than every existing task's place and so sorts last among the tasks of its
+ * own priority level, regardless of how the existing tasks have been
+ * arranged (see specs/task-management/spec.md, "A new task takes the last
+ * place in the order").
+ */
+export function nextPlace(tasks: Task[]): number {
+  if (tasks.length === 0) {
+    return 0
+  }
+  return Math.max(...tasks.map((task) => task.place)) + 1
 }
 
 export type EditTaskInput = {
@@ -82,9 +111,12 @@ export type EditTaskResult =
   { ok: true; task: Task } | { ok: false; errors: TaskValidationField[] }
 
 /**
- * Edits a task's name, duration, and priority. The creation timestamp is
- * carried over from the existing task untouched, and a name that would be
- * empty once trimmed is rejected, leaving the task unchanged.
+ * Edits a task's name, duration, and priority. The creation timestamp and
+ * the place in the order are both carried over from the existing task
+ * untouched — even when the edit changes the priority, the task keeps the
+ * place it held (see specs/task-management/spec.md, "A task keeps its
+ * place when its priority changes") — and a name that would be empty once
+ * trimmed is rejected, leaving the task unchanged.
  */
 export function editTask(task: Task, input: EditTaskInput): EditTaskResult {
   const name = input.name.trim()
@@ -107,7 +139,8 @@ export function editTask(task: Task, input: EditTaskInput): EditTaskResult {
 /**
  * Marks a task as completed, recording `now` as its completion time. `now`
  * is injected rather than read from the system clock, in keeping with
- * `createTask` (see design.md, decision 2).
+ * `createTask` (see design.md, decision 2). The task's place in the order
+ * is preserved, so a completed task keeps its position rather than moving.
  */
 export function completeTask(task: Task, now: Date): Task {
   return {

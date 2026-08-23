@@ -5,10 +5,10 @@
 
 ## 2. Domain — the place attribute
 
-- [ ] 2.1 Write a failing test that a task carries a `place` and that `createTask` records the place it is given, the way it already records the id, then add `place` to `Task` and `CreateTaskInput`
-- [ ] 2.2 Write a failing test that `nextPlace` returns one past the highest existing place, and returns the first place for an empty task list, then implement it
-- [ ] 2.3 Write a failing test that `editTask` preserves the place, including when the edit changes the priority, then confirm or implement it
-- [ ] 2.4 Write a failing test that `completeTask` preserves the place, so a completed task keeps its position rather than moving
+- [x] 2.1 Write a failing test that a task carries a `place` and that `createTask` records the place it is given, the way it already records the id, then add `place` to `Task` and `CreateTaskInput`
+- [x] 2.2 Write a failing test that `nextPlace` returns one past the highest existing place, and returns the first place for an empty task list, then implement it
+- [x] 2.3 Write a failing test that `editTask` preserves the place, including when the edit changes the priority, then confirm or implement it
+- [x] 2.4 Write a failing test that `completeTask` preserves the place, so a completed task keeps its position rather than moving
 
 ## 3. Domain — ordering
 

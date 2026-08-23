@@ -1,12 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { completeTask, createTask, editTask } from './task'
+import type { Task } from './task'
+import { completeTask, createTask, editTask, nextPlace } from './task'
+
+function makeTask(overrides: Partial<Task> & { id: string }): Task {
+  return {
+    name: overrides.id,
+    duration: 30,
+    priority: 'medium',
+    createdAt: new Date('2026-08-17T09:00:00Z'),
+    place: 0,
+    completedAt: null,
+    ...overrides,
+  }
+}
 
 describe('createTask', () => {
   const now = new Date('2026-08-17T09:00:00Z')
 
   it('creates a pending task recording the creation timestamp from the injected now', () => {
     const result = createTask(
-      { id: 'task-1', name: 'Review the PR', duration: 30, priority: 'high' },
+      {
+        id: 'task-1',
+        name: 'Review the PR',
+        duration: 30,
+        priority: 'high',
+        place: 0,
+      },
       now,
     )
 
@@ -18,8 +37,26 @@ describe('createTask', () => {
       duration: 30,
       priority: 'high',
       createdAt: now,
+      place: 0,
       completedAt: null,
     })
+  })
+
+  it('records the place it is given, the way it already records the id', () => {
+    const result = createTask(
+      {
+        id: 'task-1',
+        name: 'Review the PR',
+        duration: 30,
+        priority: 'high',
+        place: 4,
+      },
+      now,
+    )
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.task.place).toBe(4)
   })
 
   it('trims surrounding whitespace from the name', () => {
@@ -29,6 +66,7 @@ describe('createTask', () => {
         name: '  Review the PR  ',
         duration: 30,
         priority: 'high',
+        place: 0,
       },
       now,
     )
@@ -40,7 +78,7 @@ describe('createTask', () => {
 
   it('rejects an empty name', () => {
     const result = createTask(
-      { id: 'task-1', name: '', duration: 30, priority: 'high' },
+      { id: 'task-1', name: '', duration: 30, priority: 'high', place: 0 },
       now,
     )
 
@@ -49,7 +87,7 @@ describe('createTask', () => {
 
   it('rejects a name that is only whitespace', () => {
     const result = createTask(
-      { id: 'task-1', name: '   ', duration: 30, priority: 'high' },
+      { id: 'task-1', name: '   ', duration: 30, priority: 'high', place: 0 },
       now,
     )
 
@@ -63,6 +101,7 @@ describe('createTask', () => {
         name: 'Review the PR',
         duration: undefined,
         priority: 'high',
+        place: 0,
       },
       now,
     )
@@ -77,6 +116,7 @@ describe('createTask', () => {
         name: 'Review the PR',
         duration: 30,
         priority: undefined,
+        place: 0,
       },
       now,
     )
@@ -86,7 +126,13 @@ describe('createTask', () => {
 
   it('reports every missing field at once', () => {
     const result = createTask(
-      { id: 'task-1', name: '   ', duration: undefined, priority: undefined },
+      {
+        id: 'task-1',
+        name: '   ',
+        duration: undefined,
+        priority: undefined,
+        place: 0,
+      },
       now,
     )
 
@@ -94,6 +140,31 @@ describe('createTask', () => {
       ok: false,
       errors: ['name', 'duration', 'priority'],
     })
+  })
+})
+
+describe('nextPlace', () => {
+  it('returns the first place for an empty task list', () => {
+    expect(nextPlace([])).toBe(0)
+  })
+
+  it('returns one past the highest existing place', () => {
+    const tasks = [
+      makeTask({ id: 'a', place: 0 }),
+      makeTask({ id: 'b', place: 3 }),
+      makeTask({ id: 'c', place: 1 }),
+    ]
+
+    expect(nextPlace(tasks)).toBe(4)
+  })
+
+  it('returns one past the highest existing place regardless of priority level', () => {
+    const tasks = [
+      makeTask({ id: 'a', priority: 'low', place: 5 }),
+      makeTask({ id: 'b', priority: 'urgent', place: 2 }),
+    ]
+
+    expect(nextPlace(tasks)).toBe(6)
   })
 })
 
@@ -105,6 +176,7 @@ describe('editTask', () => {
     duration: 30,
     priority: 'high',
     createdAt,
+    place: 2,
     completedAt: null,
   } as const
 
@@ -132,6 +204,19 @@ describe('editTask', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.task.createdAt).toBe(createdAt)
+  })
+
+  it('preserves the place, including when the edit changes the priority', () => {
+    // The task's own priority is 'high'; this edit changes it to 'low'.
+    const result = editTask(task, {
+      name: 'Review the big PR',
+      duration: 15,
+      priority: 'low',
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.task.place).toBe(task.place)
   })
 
   it('trims surrounding whitespace from the edited name', () => {
@@ -172,6 +257,7 @@ describe('completeTask', () => {
     duration: 30,
     priority: 'high',
     createdAt,
+    place: 3,
     completedAt: null,
   } as const
 
@@ -179,6 +265,12 @@ describe('completeTask', () => {
     const completed = completeTask(task, completedAt)
 
     expect(completed.completedAt).toBe(completedAt)
+  })
+
+  it('preserves the place, so a completed task keeps its position rather than moving', () => {
+    const completed = completeTask(task, completedAt)
+
+    expect(completed.place).toBe(task.place)
   })
 
   it('leaves every other field unchanged', () => {
