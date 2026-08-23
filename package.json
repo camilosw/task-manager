@@ -11,6 +11,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "tsc -b",
     "prepare": "husky",
     "release": "commit-and-tag-version",
     "release:first": "commit-and-tag-version --first-release"
