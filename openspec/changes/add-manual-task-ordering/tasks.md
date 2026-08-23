@@ -12,12 +12,12 @@
 
 ## 3. Domain — ordering
 
-- [ ] 3.1 Write a failing test pinning both "Ordering within the selection" scenarios — same-priority tasks are considered by place, never by duration, and the place overrides age when the two disagree — then change `compareForSelection` to break ties on `place` instead of `createdAt`
-- [ ] 3.2 Add the "All tab orders by priority then age" example as a test, with places matching creation order, to pin that a user who has never reordered sees exactly what they saw before; if it passes without a code change, confirm it can fail before moving on
-- [ ] 3.3 Write a failing test for the six-task worked example — moving M3 above M1 leaves the medium tasks holding places 2, 3 and 4 in the order M3, M1, M2, with H1, H2 and L1 unmoved — then implement `reorderWithinPriority`
-- [ ] 3.4 Write a failing test that `reorderWithinPriority` returns the input unchanged for an unknown id, for two equal ids, and for two tasks of different priorities, then extend it — the last case is what makes a rejected cross-group drop a domain guarantee
-- [ ] 3.5 Write a failing test that reordering one priority level leaves the order of every other level untouched, and changes no task's priority
-- [ ] 3.6 Write a failing test for both promoted-task scenarios — a task edited to a new priority keeps its place and lands among its new peers by that place, whether or not those peers have been reordered; if it passes on the strength of 2.3, confirm it can fail before moving on
+- [x] 3.1 Write a failing test pinning both "Ordering within the selection" scenarios — same-priority tasks are considered by place, never by duration, and the place overrides age when the two disagree — then change `compareForSelection` to break ties on `place` instead of `createdAt`
+- [x] 3.2 Add the "All tab orders by priority then age" example as a test, with places matching creation order, to pin that a user who has never reordered sees exactly what they saw before; if it passes without a code change, confirm it can fail before moving on
+- [x] 3.3 Write a failing test for the six-task worked example — moving M3 above M1 leaves the medium tasks holding places 2, 3 and 4 in the order M3, M1, M2, with H1, H2 and L1 unmoved — then implement `reorderWithinPriority`
+- [x] 3.4 Write a failing test that `reorderWithinPriority` returns the input unchanged for an unknown id, for two equal ids, and for two tasks of different priorities, then extend it — the last case is what makes a rejected cross-group drop a domain guarantee
+- [x] 3.5 Write a failing test that reordering one priority level leaves the order of every other level untouched, and changes no task's priority
+- [x] 3.6 Write a failing test for both promoted-task scenarios — a task edited to a new priority keeps its place and lands among its new peers by that place, whether or not those peers have been reordered; if it passes on the strength of 2.3, confirm it can fail before moving on
 
 ## 4. Domain — the daily plan under the new order
 

@@ -148,3 +148,73 @@ export function completeTask(task: Task, now: Date): Task {
     completedAt: now,
   }
 }
+
+/**
+ * Removes the item at `from` and reinserts it at `to`, leaving every other
+ * item's relative order unchanged. A local helper rather than `@dnd-kit`'s
+ * `arrayMove`: the domain layer must not import the drag library (see
+ * design.md, decision 1, and the import-boundary lint rule).
+ */
+function arrayMove<T>(items: T[], from: number, to: number): T[] {
+  const copy = [...items]
+  const [moved] = copy.splice(from, 1)
+  copy.splice(to, 0, moved)
+  return copy
+}
+
+/**
+ * Moves `activeId`'s task to the position `overId`'s task currently holds,
+ * among the tasks of their shared priority level (see
+ * specs/task-management/spec.md, "Reordering a task within its priority
+ * level").
+ *
+ * A reordering permutes the places already held by that level's tasks; it
+ * does not renumber globally, so every other level's places are untouched
+ * (see design.md, decision 2).
+ *
+ * Returns `tasks` unchanged — a no-op — when `activeId` and `overId` are
+ * the same, when either id does not identify a task in `tasks`, or when the
+ * two tasks belong to different priority levels. That last case is what
+ * makes a rejected cross-group drop a domain guarantee rather than a UI
+ * courtesy (see design.md, decision 3).
+ */
+export function reorderWithinPriority(
+  tasks: Task[],
+  activeId: string,
+  overId: string,
+): Task[] {
+  if (activeId === overId) {
+    return tasks
+  }
+
+  const activeTask = tasks.find((task) => task.id === activeId)
+  const overTask = tasks.find((task) => task.id === overId)
+
+  if (
+    activeTask === undefined ||
+    overTask === undefined ||
+    activeTask.priority !== overTask.priority
+  ) {
+    return tasks
+  }
+
+  const group = tasks
+    .filter((task) => task.priority === activeTask.priority)
+    .sort((a, b) => a.place - b.place)
+  const places = group.map((task) => task.place)
+
+  const fromIndex = group.findIndex((task) => task.id === activeId)
+  const toIndex = group.findIndex((task) => task.id === overId)
+  const reordered = arrayMove(group, fromIndex, toIndex)
+
+  const placeById = new Map(
+    reordered.map((task, index) => [task.id, places[index]]),
+  )
+
+  return tasks.map((task) => {
+    const newPlace = placeById.get(task.id)
+    return newPlace === undefined || newPlace === task.place
+      ? task
+      : { ...task, place: newPlace }
+  })
+}

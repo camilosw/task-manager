@@ -8,6 +8,7 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     duration: 30,
     priority: 'medium',
     createdAt: new Date('2026-08-17T09:00:00Z'),
+    place: 0,
     completedAt: null,
     ...overrides,
   }
@@ -19,11 +20,13 @@ describe('compareForSelection', () => {
       id: 'urgent',
       priority: 'urgent',
       createdAt: new Date('2026-08-17T12:00:00Z'),
+      place: 1,
     })
     const low = makeTask({
       id: 'low',
       priority: 'low',
       createdAt: new Date('2026-08-17T09:00:00Z'),
+      place: 0,
     })
 
     const sorted = [low, urgent].sort(compareForSelection)
@@ -31,51 +34,111 @@ describe('compareForSelection', () => {
     expect(sorted.map((task) => task.id)).toEqual(['urgent', 'low'])
   })
 
-  it('breaks ties within the same priority by creation timestamp, oldest first', () => {
+  it('breaks ties within the same priority by place, never by duration, when places match creation order (spec: same priority is broken by age, not by length)', () => {
+    // Places match creation order, as they would for a user who has never
+    // reordered anything (see specs/daily-plan/spec.md, "Ordering within
+    // the selection").
     const m1 = makeTask({
       id: 'M1',
       priority: 'medium',
       createdAt: new Date('2026-08-17T09:00:00Z'),
+      place: 1,
       duration: 45,
     })
     const m2 = makeTask({
       id: 'M2',
       priority: 'medium',
       createdAt: new Date('2026-08-17T10:00:00Z'),
+      place: 2,
       duration: 5,
     })
     const m3 = makeTask({
       id: 'M3',
       priority: 'medium',
       createdAt: new Date('2026-08-17T11:00:00Z'),
+      place: 3,
       duration: 20,
     })
 
     // Deliberately shuffled and duration-sorted-ascending, to prove duration
     // plays no part in the ordering: sorting by duration would yield
-    // M2, M3, M1, but the spec requires M1, M2, M3 (creation order).
+    // M2, M3, M1, but the spec requires M1, M2, M3 (place order).
     const sorted = [m3, m1, m2].sort(compareForSelection)
 
     expect(sorted.map((task) => task.id)).toEqual(['M1', 'M2', 'M3'])
   })
 
-  it('never reorders same-priority tasks by duration', () => {
-    const long = makeTask({
-      id: 'long',
-      priority: 'high',
-      duration: 120,
+  it('breaks ties by the arranged place even when it disagrees with creation age (spec: the arranged place overrides age)', () => {
+    // The user has arranged these against their creation order: M3 is the
+    // newest task but holds the first place; M1 is the oldest task but
+    // holds the last place. If the comparator still broke ties on
+    // `createdAt`, this would sort M1, M2, M3 (oldest first) instead.
+    const m3 = makeTask({
+      id: 'M3',
+      priority: 'medium',
+      createdAt: new Date('2026-08-17T11:00:00Z'),
+      place: 1,
+      duration: 20,
+    })
+    const m1 = makeTask({
+      id: 'M1',
+      priority: 'medium',
       createdAt: new Date('2026-08-17T09:00:00Z'),
+      place: 2,
+      duration: 45,
     })
-    const short = makeTask({
-      id: 'short',
-      priority: 'high',
-      duration: 5,
+    const m2 = makeTask({
+      id: 'M2',
+      priority: 'medium',
       createdAt: new Date('2026-08-17T10:00:00Z'),
+      place: 3,
+      duration: 5,
     })
 
-    const sorted = [long, short].sort(compareForSelection)
+    const sorted = [m1, m2, m3].sort(compareForSelection)
 
-    expect(sorted.map((task) => task.id)).toEqual(['long', 'short'])
+    expect(sorted.map((task) => task.id)).toEqual(['M3', 'M1', 'M2'])
+  })
+
+  it("produces the All tab's priority-then-place order for a user who has never reordered (task-views spec: 'The All tab orders by priority then age')", () => {
+    // Places match creation order throughout, so this pins that a user who
+    // has never dragged anything sees exactly what they saw before this
+    // change: oldest first within a priority level, levels most important
+    // first.
+    const d = makeTask({
+      id: 'D',
+      priority: 'very-low',
+      createdAt: new Date('2026-08-17T07:00:00Z'),
+      place: 1,
+    })
+    const c = makeTask({
+      id: 'C',
+      priority: 'medium',
+      createdAt: new Date('2026-08-17T08:00:00Z'),
+      place: 2,
+    })
+    const a = makeTask({
+      id: 'A',
+      priority: 'medium',
+      createdAt: new Date('2026-08-17T09:00:00Z'),
+      place: 3,
+    })
+    const b = makeTask({
+      id: 'B',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-17T11:00:00Z'),
+      place: 4,
+    })
+    const e = makeTask({
+      id: 'E',
+      priority: 'high',
+      createdAt: new Date('2026-08-17T12:00:00Z'),
+      place: 5,
+    })
+
+    const sorted = [d, c, a, b, e].sort(compareForSelection)
+
+    expect(sorted.map((task) => task.id)).toEqual(['B', 'E', 'C', 'A', 'D'])
   })
 })
 
