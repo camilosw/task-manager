@@ -8,9 +8,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -64,6 +66,21 @@ export function runRepositoryContractTests(
       const data = await repository.loadAll()
 
       expect(sortedById(data.tasks)).toEqual(sortedById([urgent, completed]))
+    })
+
+    it("round-trips a recurring task's rule and last completion date", async () => {
+      const repository = await createRepository()
+      const recurring = makeTask({
+        id: 'recurring-task',
+        priority: null,
+        recurrence: { kind: 'monthly-weekday', nth: 1, weekday: 1 },
+        lastCompletedOn: '2026-08-03',
+      })
+
+      await repository.saveTasks([recurring])
+      const data = await repository.loadAll()
+
+      expect(data.tasks).toEqual([recurring])
     })
 
     it("round-trips a task's place", async () => {

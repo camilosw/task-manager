@@ -1,20 +1,4 @@
-# task-views Specification
-
-## Purpose
-
-Defines the three tabs the application presents — Today, All, and Completed — covering what each one lists, how tasks are grouped and ordered within them, and how a completed task is rendered in each.
-
-## Requirements
-
-### Requirement: Three tabs
-
-The main screen SHALL present exactly three tabs: Today, All, and Completed. Today SHALL be the tab shown when the application opens.
-
-#### Scenario: The tabs are available on the main screen
-
-- **WHEN** the user opens the application
-- **THEN** the Today, All, and Completed tabs are available
-- **AND** the Today tab is the one displayed
+## MODIFIED Requirements
 
 ### Requirement: Every task display shows name, duration, and priority
 
@@ -114,6 +98,37 @@ A group with no tasks SHALL NOT be displayed, including its heading. Each headin
 - **THEN** the heading reads "Recurring"
 - **AND** it is identifiable as the recurring group without relying on its color
 
+### Requirement: The All tab groups tasks by priority
+
+The All tab SHALL group its tasks under headings: a Recurring group first, then the priority groups ordered urgent, high, medium, low, very low, in the same way the Today tab does. A group with no tasks SHALL NOT be displayed, including its heading.
+
+The grouping SHALL be visible rather than implied by ordering alone, because it is the boundary a reordering cannot cross.
+
+#### Scenario: Pending tasks are shown under their priority headings
+
+- **WHEN** the All tab contains two medium tasks and one low task
+- **THEN** a medium heading is shown with both medium tasks beneath it
+- **AND** a low heading is shown with the single low task beneath it
+- **AND** the medium group appears above the low group
+
+#### Scenario: Recurring tasks are shown under their own heading, first
+
+- **WHEN** the All tab contains a recurring task and a medium task
+- **THEN** a "Recurring" heading is shown with the recurring task beneath it
+- **AND** the Recurring group appears above every priority group
+- **AND** the recurring task does not appear under any priority heading
+
+#### Scenario: Empty priority groups are hidden
+
+- **WHEN** the All tab contains no pending task of a given priority level
+- **THEN** neither that group's heading nor an empty placeholder is displayed
+
+#### Scenario: The All tab is empty
+
+- **WHEN** no pending tasks and no recurring tasks exist
+- **THEN** the All tab shows an empty state inviting the user to create a task
+- **AND** no group headings are displayed
+
 ### Requirement: Ordering within a list
 
 Within a priority group in the Today tab, tasks SHALL be ordered by the place the user has arranged them in. Within the Recurring group in either tab, recurring tasks SHALL likewise be ordered by that place. In the All tab, tasks SHALL be ordered by group first — Recurring, then urgent, high, medium, low, very low — and by that same place second. No tab SHALL order tasks by creation timestamp, and none SHALL order them by duration.
@@ -155,7 +170,7 @@ Given four tasks, none ever reordered, so their places match their creation orde
 
 #### Scenario: The All tab reflects a reordering
 
-Continuing from the arrangement above, the user moves A above C, so A holds place 2 and C holds place 3.
+Continuing from the first arrangement above, the user moves A above C, so A holds place 2 and C holds place 3.
 
 - **WHEN** the All tab is displayed
 - **THEN** the tasks appear in the order B, E, A, C, D
@@ -166,117 +181,6 @@ Continuing from the arrangement above, the user moves A above C, so A holds plac
 - **WHEN** a priority group or the Recurring group in the Today tab contains several tasks
 - **THEN** they are listed in the order of the places the user has arranged them in
 - **AND** a task completed today keeps its position in that order, struck through, rather than moving
-
-### Requirement: The All tab groups tasks by priority
-
-The All tab SHALL group its tasks under headings: a Recurring group first, then the priority groups ordered urgent, high, medium, low, very low, in the same way the Today tab does. A group with no tasks SHALL NOT be displayed, including its heading.
-
-The grouping SHALL be visible rather than implied by ordering alone, because it is the boundary a reordering cannot cross.
-
-#### Scenario: Pending tasks are shown under their priority headings
-
-- **WHEN** the All tab contains two medium tasks and one low task
-- **THEN** a medium heading is shown with both medium tasks beneath it
-- **AND** a low heading is shown with the single low task beneath it
-- **AND** the medium group appears above the low group
-
-#### Scenario: Recurring tasks are shown under their own heading, first
-
-- **WHEN** the All tab contains a recurring task and a medium task
-- **THEN** a "Recurring" heading is shown with the recurring task beneath it
-- **AND** the Recurring group appears above every priority group
-- **AND** the recurring task does not appear under any priority heading
-
-#### Scenario: Empty priority groups are hidden
-
-- **WHEN** the All tab contains no pending task of a given priority level
-- **THEN** neither that group's heading nor an empty placeholder is displayed
-
-#### Scenario: The All tab is empty
-
-- **WHEN** no pending tasks and no recurring tasks exist
-- **THEN** the All tab shows an empty state inviting the user to create a task
-- **AND** no group headings are displayed
-
-### Requirement: Tasks are reordered in the All tab only
-
-The All tab SHALL be the only place a task's place in the order can be changed. The user SHALL be able to drag a task to a new position within its priority group there.
-
-A task SHALL NOT be draggable out of its priority group. An attempt to drop a task into a different group SHALL leave every task's place unchanged and SHALL NOT alter the dragged task's priority. Abandoning a drag SHALL likewise leave every place unchanged.
-
-Neither the Today tab nor the Completed tab SHALL offer a way to reorder tasks.
-
-#### Scenario: Dragging within a group reorders
-
-- **WHEN** the user drags a task to a new position within its own priority group in the All tab
-- **THEN** the task appears at that position
-- **AND** the order of every other priority group is unchanged
-
-#### Scenario: A drop outside the group is rejected
-
-- **WHEN** the user drags a task and releases it over a different priority group
-- **THEN** the task returns to the position it held
-- **AND** its priority is unchanged
-- **AND** no other task changes position
-
-#### Scenario: An abandoned drag changes nothing
-
-- **WHEN** the user starts dragging a task and abandons the drag without dropping it
-- **THEN** every task holds the position it held before the drag began
-
-#### Scenario: The other tabs offer no reordering
-
-- **WHEN** the user is viewing the Today tab or the Completed tab
-- **THEN** no control for reordering tasks is offered there
-
-### Requirement: Reordering is operable without a drag gesture
-
-Reordering SHALL be operable by keyboard alone, so the order is not reachable only by users who can perform a pointer or touch drag. The keyboard path SHALL move a task within its priority group only, under the same rules as dragging, and SHALL produce the same result.
-
-The control that begins a reordering SHALL carry an accessible name, and the outcome of a completed move SHALL be conveyed to assistive technology rather than only shown visually.
-
-#### Scenario: A task is moved by keyboard
-
-- **WHEN** the user moves a task within its priority group using the keyboard alone
-- **THEN** the task takes its new position
-- **AND** the resulting order is the same as if the task had been dragged there
-
-#### Scenario: The keyboard path cannot leave the group
-
-- **WHEN** the user attempts, by keyboard, to move a task past the last position of its priority group
-- **THEN** the task stays at the last position of that group
-- **AND** its priority is unchanged
-
-#### Scenario: The reordering control is named
-
-- **WHEN** a pending task is shown in the All tab
-- **THEN** its reordering control carries an accessible name
-
-### Requirement: Reordering does not change what the Today tab contains
-
-Reordering tasks in the All tab SHALL NOT add a task to the Today tab, remove a task from it, or change which tasks it contains in any way. The Today tab SHALL, however, display the tasks it already contains in the new order, so the two tabs never disagree about the order of the same tasks.
-
-The Completed tab SHALL be unaffected by a reordering; it stays ordered most recently completed first.
-
-#### Scenario: A reordering re-sequences Today without changing its membership
-
-Given the Today tab contains high task H1 and medium tasks M1 and M2, in that order, and the All tab additionally contains a pending medium task M3 that is not in today's plan:
-
-- **WHEN** the user moves M2 above M1 in the All tab
-- **THEN** the Today tab shows H1, then M2, then M1
-- **AND** M3 still does not appear in the Today tab
-- **AND** no task has been removed from the Today tab
-
-#### Scenario: A reordering cannot pull a task into Today
-
-- **WHEN** the user moves a pending task that is not part of today's plan to the first position of its priority group in the All tab
-- **THEN** the task still does not appear in the Today tab
-- **AND** it appears first among its group in the All tab
-
-#### Scenario: The Completed tab ignores the arranged order
-
-- **WHEN** the user reorders pending tasks in the All tab
-- **THEN** the Completed tab still lists completed tasks most recently completed first
 
 ### Requirement: The All tab lists every pending task
 
@@ -414,6 +318,8 @@ The "Recalculate today" action SHALL be reachable from the Today tab. Its effect
 
 - **WHEN** the user is viewing the All tab or the Completed tab
 - **THEN** no "Recalculate today" action is presented
+
+## ADDED Requirements
 
 ### Requirement: Recurring tasks are reordered within the Recurring group
 

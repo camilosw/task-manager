@@ -124,6 +124,30 @@
   color: var(--priority-very-low-fg);
 }
 
+/* The Recurring type choice carries the same shared recurring color token
+   used for the recurrence badge on a task row and the "Recurring" group
+   heading, once selected (specs/appearance/spec.md, "Recurring tasks have
+   their own color in both themes") — rather than the generic accent color
+   every other unselected/selected toggle in this form uses. Unselected
+   stays neutral, matching every other chip. */
+.task-form__chip--recurring[aria-pressed='true'] {
+  border-color: var(--recurring-marker);
+  background: var(--recurring-bg);
+  color: var(--recurring-fg);
+}
+
+/* The plain-language echo of the rule being built (design.md, decision 11):
+   a normal readable text node, so it needs no styling beyond the form's
+   other secondary text, and an always-mounted `role="status"` container so
+   assistive technology picks up its updates rather than only its initial
+   render. */
+.task-form__echo {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  min-height: 1em;
+}
+
 .task-form__errors {
   padding: 10px 12px;
   border-radius: 9px;

@@ -19,9 +19,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -207,9 +209,30 @@ function mediumTask(id: string, name: string, place: number): Task {
     name,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place,
     completedAt: null,
+    lastCompletedOn: null,
+  }
+}
+
+/** A recurring task (weekly, Monday) for the reordering-boundary tests below
+ * (see tasks.md, section 12) — the rule's shape is irrelevant to reordering,
+ * which never inspects it; only `priority === null` matters, since that is
+ * what `reorderWithinPriority` and `handleTaskDragEnd` key the Recurring
+ * group's boundary on (see PriorityGroups.tsx and dragReorder.ts). */
+function recurringTask(id: string, name: string, place: number): Task {
+  return {
+    id,
+    name,
+    duration: 30,
+    priority: null,
+    recurrence: { kind: 'weekly', weekdays: [1] },
+    createdAt: new Date('2026-08-17T09:00:00.000Z'),
+    place,
+    completedAt: null,
+    lastCompletedOn: null,
   }
 }
 
@@ -278,9 +301,11 @@ describe('the keyboard path cannot leave the group (8.6)', () => {
       name: 'Low task',
       duration: 30,
       priority: 'low',
+      recurrence: null,
       createdAt: new Date('2026-08-17T09:00:00.000Z'),
       place: 2,
       completedAt: null,
+      lastCompletedOn: null,
     }
 
     const repository = createInMemoryRepository()
@@ -486,9 +511,11 @@ describe('a rejected or abandoned drag confirms nothing (9.6)', () => {
       name: 'Low task',
       duration: 30,
       priority: 'low',
+      recurrence: null,
       createdAt: new Date('2026-08-17T09:00:00.000Z'),
       place: 2,
       completedAt: null,
+      lastCompletedOn: null,
     }
 
     const repository = createInMemoryRepository()
@@ -575,5 +602,316 @@ describe('a rejected or abandoned drag confirms nothing (9.6)', () => {
     ])
     expect(getFeedbackRegion().textContent).toBe('')
     expect(screen.queryByText(/required/i)).toBeNull()
+  })
+})
+
+describe('a recurring task is reordered within the Recurring group (12.1)', () => {
+  mockTaskRowLayout()
+
+  it('reorders within Recurring and leaves every priority group unchanged', async () => {
+    const r1 = recurringTask('r1', 'Recurring first', 0)
+    const r2 = recurringTask('r2', 'Recurring second', 1)
+    const m1 = mediumTask('m1', 'Medium first', 2)
+    const m2 = mediumTask('m2', 'Medium second', 3)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([r1, r2, m1, m2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    const firstItem = within(recurringGroup)
+      .getByText('Recurring first')
+      .closest('li')
+    if (!firstItem) throw new Error('expected a list item')
+    const handle = within(firstItem).getByRole('button', { name: 'Reorder' })
+
+    // Same cross-check as "a task is moved by keyboard (8.5)": the display
+    // order after a keyboard move must match `reorderWithinPriority` applied
+    // directly to the same pair, sorted by the `place` it assigns.
+    const expectedOrder = reorderWithinPriority([r1, r2, m1, m2], 'r1', 'r2')
+      .sort((a, b) => a.place - b.place)
+      .map((task) => task.id)
+      .filter((id) => id === 'r1' || id === 'r2')
+
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Recurring' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual(
+        expectedOrder,
+      )
+    })
+
+    // The Medium group's membership and order are untouched by a
+    // reordering that happened entirely inside the Recurring group.
+    const mediumItems = within(
+      screen.getByRole('region', { name: 'Medium' }),
+    ).getAllByRole('listitem')
+    expect(
+      mediumItems.map((item) => item.getAttribute('data-task-id')),
+    ).toEqual(['m1', 'm2'])
+  })
+})
+
+describe('the reordering boundary holds for the Recurring group (12.2)', () => {
+  mockTaskRowLayout()
+
+  function dndLiveRegion(): HTMLElement {
+    const region = screen
+      .getAllByRole('status')
+      .find((element) => element.getAttribute('aria-live') === 'assertive')
+    if (!region) throw new Error('expected the dnd-kit live region')
+    return region
+  }
+
+  it('rejects a recurring task dropped onto a priority group, converting neither task', async () => {
+    const r1 = recurringTask('r1', 'Recurring first', 0)
+    const r2 = recurringTask('r2', 'Recurring second', 1)
+    const m1 = mediumTask('m1', 'Medium first', 2)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([r1, r2, m1])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    const lastItem = within(recurringGroup)
+      .getByText('Recurring second')
+      .closest('li')
+    if (!lastItem) throw new Error('expected a list item')
+    const handle = within(lastItem).getByRole('button', { name: 'Reorder' })
+
+    // "Recurring second" is the last row of the Recurring group; the row
+    // immediately below it in the document belongs to the Medium group, so
+    // moving it down targets that group's boundary.
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    // The drop really reached "Medium first" — proof this is a rejection,
+    // not a move that silently never happened (dnd-kit announces every
+    // completed drag end regardless of what the app's own onDragEnd handler
+    // decides to do with it).
+    await waitFor(() => {
+      expect(dndLiveRegion().textContent).toContain('Medium first')
+    })
+
+    // Every place is unchanged.
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Recurring' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual([
+        'r1',
+        'r2',
+      ])
+    })
+    const mediumItems = within(
+      screen.getByRole('region', { name: 'Medium' }),
+    ).getAllByRole('listitem')
+    expect(
+      mediumItems.map((item) => item.getAttribute('data-task-id')),
+    ).toEqual(['m1'])
+
+    // Neither task changed kind: the recurring task is still absent from
+    // the Medium group (it was not converted into a one-off task), and the
+    // Recurring group still holds exactly its two recurring tasks (the
+    // medium task was not converted into a recurring one).
+    expect(
+      within(screen.getByRole('region', { name: 'Medium' })).queryByText(
+        'Recurring second',
+      ),
+    ).toBeNull()
+  })
+
+  it('rejects a one-off task dropped onto the Recurring group, converting neither task', async () => {
+    const r1 = recurringTask('r1', 'Recurring first', 0)
+    const m1 = mediumTask('m1', 'Medium first', 1)
+    const m2 = mediumTask('m2', 'Medium second', 2)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([r1, m1, m2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const mediumGroup = screen.getByRole('region', { name: 'Medium' })
+    const firstItem = within(mediumGroup)
+      .getByText('Medium first')
+      .closest('li')
+    if (!firstItem) throw new Error('expected a list item')
+    const handle = within(firstItem).getByRole('button', { name: 'Reorder' })
+
+    // "Medium first" is the first row of the Medium group; the row
+    // immediately above it in the document belongs to the Recurring group,
+    // so moving it up targets that group's boundary.
+    await moveByKeyboard(handle, 'ArrowUp')
+
+    // The drop really reached "Recurring first" — proof this is a
+    // rejection, not a move that silently never happened.
+    await waitFor(() => {
+      expect(dndLiveRegion().textContent).toContain('Recurring first')
+    })
+
+    // Every place is unchanged.
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Medium' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual([
+        'm1',
+        'm2',
+      ])
+    })
+    const recurringItems = within(
+      screen.getByRole('region', { name: 'Recurring' }),
+    ).getAllByRole('listitem')
+    expect(
+      recurringItems.map((item) => item.getAttribute('data-task-id')),
+    ).toEqual(['r1'])
+
+    // Neither task changed kind.
+    expect(
+      within(screen.getByRole('region', { name: 'Recurring' })).queryByText(
+        'Medium first',
+      ),
+    ).toBeNull()
+  })
+})
+
+describe('the Recurring group is reorderable by keyboard alone and cannot be left by keyboard (12.3)', () => {
+  mockTaskRowLayout()
+
+  it('produces the same order a drag to that position would, matching priority-group keyboard parity', async () => {
+    const r1 = recurringTask('r1', 'Recurring first', 0)
+    const r2 = recurringTask('r2', 'Recurring second', 1)
+    const r3 = recurringTask('r3', 'Recurring third', 2)
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([r1, r2, r3])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    const firstItem = within(recurringGroup)
+      .getByText('Recurring first')
+      .closest('li')
+    if (!firstItem) throw new Error('expected a list item')
+    const handle = within(firstItem).getByRole('button', { name: 'Reorder' })
+
+    // No pointer or touch event is fired anywhere in this test — pickup,
+    // move and drop are each a keyboard event, exactly as in "a task is
+    // moved by keyboard (8.5)" for a priority group.
+    const expectedOrder = reorderWithinPriority([r1, r2, r3], 'r1', 'r2')
+      .sort((a, b) => a.place - b.place)
+      .map((task) => task.id)
+
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Recurring' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual(
+        expectedOrder,
+      )
+    })
+  })
+
+  it('leaves a recurring task at the last position of its group, still recurring, when moved past it by keyboard', async () => {
+    const r1 = recurringTask('r1', 'Recurring first', 0)
+    const r2 = recurringTask('r2', 'Recurring second', 1)
+    const highTask: Task = {
+      id: 'high1',
+      name: 'High task',
+      duration: 30,
+      priority: 'high',
+      recurrence: null,
+      createdAt: new Date('2026-08-17T09:00:00.000Z'),
+      place: 2,
+      completedAt: null,
+      lastCompletedOn: null,
+    }
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([r1, r2, highTask])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    const lastItem = within(recurringGroup)
+      .getByText('Recurring second')
+      .closest('li')
+    if (!lastItem) throw new Error('expected a list item')
+    const handle = within(lastItem).getByRole('button', { name: 'Reorder' })
+
+    function dndLiveRegion(): HTMLElement {
+      const region = screen
+        .getAllByRole('status')
+        .find((element) => element.getAttribute('aria-live') === 'assertive')
+      if (!region) throw new Error('expected the dnd-kit live region')
+      return region
+    }
+
+    // Mirrors "the keyboard path cannot leave the group (8.6)" exactly,
+    // but for the Recurring group: the row below "Recurring second" belongs
+    // to the High group, so the keyboard move targets that boundary.
+    await moveByKeyboard(handle, 'ArrowDown')
+
+    await waitFor(() => {
+      expect(dndLiveRegion().textContent).toContain('High task')
+    })
+
+    await waitFor(() => {
+      const items = within(
+        screen.getByRole('region', { name: 'Recurring' }),
+      ).getAllByRole('listitem')
+      expect(items.map((item) => item.getAttribute('data-task-id'))).toEqual([
+        'r1',
+        'r2',
+      ])
+    })
+    // Still under its original heading — the keyboard move did not carry
+    // it out of the Recurring group into the High group.
+    expect(
+      within(screen.getByRole('region', { name: 'High' })).queryByText(
+        'Recurring second',
+      ),
+    ).toBeNull()
   })
 })

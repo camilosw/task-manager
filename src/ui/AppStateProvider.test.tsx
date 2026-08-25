@@ -10,9 +10,16 @@ import {
   type Task,
 } from '../domain/task'
 import { recomputeSnapshot, type DaySnapshot } from '../domain/snapshot'
+import type { RecurrenceRule } from '../domain/recurrence'
 import { AppStateProvider } from './AppStateProvider'
 import { useAppState } from './useAppState'
 import type { AppState } from './appStateContext'
+
+/** A rule of every Monday, reused across the recurring-task scenarios below
+ * (tasks.md section 8). Matches the dates traced in
+ * specs/recurring-tasks/spec.md and specs/daily-plan/spec.md, which use
+ * Monday 17/24/31 August 2026 throughout. */
+const weeklyMonday: RecurrenceRule = { kind: 'weekly', weekdays: [1] }
 
 function wrapperFor(repository: Repository, now?: () => Date) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -29,9 +36,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -468,6 +477,163 @@ describe('useAppState first-ever load', () => {
 
     assertLoaded(result.current)
     expect(result.current.snapshot).toEqual(existingSnapshot)
+    expect(saveSnapshotSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('useAppState load reawakening (8.1)', () => {
+  it('reawakens a due recurring task and persists it before recomputing the snapshot, on load', async () => {
+    const now = () => new Date('2026-08-24T09:00:00.000Z') // the following Monday
+
+    const recurringTask = makeTask({
+      id: 'weekly-review',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: weeklyMonday,
+      createdAt: new Date('2026-08-03T09:00:00.000Z'), // an earlier Monday
+      completedAt: new Date('2026-08-17T10:00:00.000Z'), // stale — last Monday's completion
+      lastCompletedOn: '2026-08-17',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurringTask])
+    await repository.saveSnapshot({
+      date: '2026-08-17',
+      plannedIds: [recurringTask.id],
+      admittedIds: [],
+    })
+    const saveTasksSpy = vi.spyOn(repository, 'saveTasks')
+    const saveSnapshotSpy = vi.spyOn(repository, 'saveSnapshot')
+
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+
+    // The reawakened task — completedAt cleared, lastCompletedOn intact — is
+    // written back to the repository as part of loading (see design.md,
+    // decision 8: recomputation gains a task-record write it did not have
+    // before).
+    const reawakenedTask = { ...recurringTask, completedAt: null }
+    expect(saveTasksSpy).toHaveBeenCalledWith([reawakenedTask])
+
+    // The order is not interchangeable: `recomputeSnapshot` calls
+    // `selectDailyPlan`, which filters on `completedAt === null`, so the
+    // task write must land before the snapshot write for the reawakened
+    // task to be seen as pending and selected (see design.md, decision 8).
+    expect(saveTasksSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      saveSnapshotSpy.mock.invocationCallOrder[0],
+    )
+
+    expect(result.current.tasks).toEqual([reawakenedTask])
+    expect(result.current.snapshot?.date).toBe('2026-08-24')
+    // The task landed in the freshly computed plan — proof recomputation ran
+    // against the reawakened tasks, not the stale ones.
+    expect(result.current.snapshot?.plannedIds).toContain(recurringTask.id)
+  })
+
+  it('does not persist tasks on load when reawakening leaves every task unchanged', async () => {
+    const now = () => new Date('2026-08-24T09:00:00.000Z')
+
+    // Completed today already, so it is not due — nothing for reawaken to
+    // clear (see recurrence.ts, `reawaken`'s no-write common case).
+    const atRestTask = makeTask({
+      id: 'weekly-review',
+      priority: null,
+      recurrence: weeklyMonday,
+      createdAt: new Date('2026-08-03T09:00:00.000Z'),
+      completedAt: new Date('2026-08-24T08:00:00.000Z'),
+      lastCompletedOn: '2026-08-24',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([atRestTask])
+    // Dated earlier than `now`, so the load still triggers a recomputation —
+    // only the task write should be skipped.
+    await repository.saveSnapshot({
+      date: '2026-08-17',
+      plannedIds: [],
+      admittedIds: [],
+    })
+    const saveTasksSpy = vi.spyOn(repository, 'saveTasks')
+    const saveSnapshotSpy = vi.spyOn(repository, 'saveSnapshot')
+
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+
+    expect(saveTasksSpy).not.toHaveBeenCalled()
+    expect(saveSnapshotSpy).toHaveBeenCalled()
+    expect(result.current.tasks).toEqual([atRestTask])
+  })
+})
+
+describe('useAppState task creation admits a due recurring task (8.5)', () => {
+  const fixedNow = new Date('2026-08-17T09:00:00.000Z') // a Monday
+  const now = () => fixedNow
+
+  it('admits a recurring task created mid-day, on a date its rule fires, into the existing snapshot and persists it', async () => {
+    const repository = createInMemoryRepository()
+    const existingSnapshot: DaySnapshot = {
+      date: '2026-08-17',
+      plannedIds: [],
+      admittedIds: [],
+    }
+    await repository.saveSnapshot(existingSnapshot)
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+    const saveTasksSpy = vi.spyOn(repository, 'saveTasks')
+    const saveSnapshotSpy = vi.spyOn(repository, 'saveSnapshot')
+
+    let createResult!: CreateTaskResult
+    await act(async () => {
+      assertLoaded(result.current)
+      createResult = await result.current.createTask({
+        name: 'Weekly review',
+        duration: 30,
+        recurrence: weeklyMonday,
+      })
+    })
+
+    expect(createResult.ok).toBe(true)
+    if (!createResult.ok) return
+    expect(createResult.task).toMatchObject({
+      name: 'Weekly review',
+      duration: 30,
+      priority: null,
+      recurrence: weeklyMonday,
+      lastCompletedOn: null,
+    })
+
+    assertLoaded(result.current)
+    expect(result.current.snapshot).toEqual({
+      ...existingSnapshot,
+      admittedIds: [createResult.task.id],
+    })
+    expect(saveTasksSpy).toHaveBeenLastCalledWith([createResult.task])
+    expect(saveSnapshotSpy).toHaveBeenCalledWith(result.current.snapshot)
+  })
+
+  it('does not admit a recurring task created on a date its rule does not fire', async () => {
+    const repository = createInMemoryRepository()
+    const existingSnapshot: DaySnapshot = {
+      date: '2026-08-17',
+      plannedIds: [],
+      admittedIds: [],
+    }
+    await repository.saveSnapshot(existingSnapshot)
+    const result = await renderLoaded(repository, now)
+    assertLoaded(result.current)
+    const saveSnapshotSpy = vi.spyOn(repository, 'saveSnapshot')
+
+    // Monday 17 August 2026 is not a Wednesday, so a weekly-Wednesday rule
+    // does not fire today.
+    await act(async () => {
+      assertLoaded(result.current)
+      await result.current.createTask({
+        name: 'Midweek check-in',
+        duration: 15,
+        recurrence: { kind: 'weekly', weekdays: [3] },
+      })
+    })
+
     expect(saveSnapshotSpy).not.toHaveBeenCalled()
   })
 })

@@ -1,6 +1,7 @@
 import { createContext } from 'react'
 import type { Duration } from '../domain/duration'
 import type { Priority } from '../domain/priority'
+import type { RecurrenceRuleDraft } from '../domain/recurrence'
 import type {
   CreateTaskResult,
   EditTaskInput,
@@ -10,11 +11,18 @@ import type {
 import type { DaySnapshot } from '../domain/snapshot'
 
 /** The fields a caller supplies to create a task through the store; `id`
- * and `createdAt` are the store's responsibility, not the caller's. */
+ * and `createdAt` are the store's responsibility, not the caller's.
+ * `recurrence` mirrors `CreateTaskInput.recurrence` in `src/domain/task.ts`:
+ * its mere presence, even as an incomplete draft, signals recurring intent
+ * the way `priority`'s presence signals a one-off creation (see
+ * design.md, decision 11 and tasks.md section 8 — this is state-pipeline
+ * plumbing for the form the UI section (9) will drive; nothing here renders
+ * a rule builder). */
 export type CreateTaskFormInput = {
   name: string
   duration?: Duration
   priority?: Priority
+  recurrence?: RecurrenceRuleDraft
 }
 
 /**

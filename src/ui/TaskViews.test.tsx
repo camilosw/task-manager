@@ -21,9 +21,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -212,6 +214,464 @@ describe('Today groups order tasks by place, not creation time (9.1)', () => {
       expect.stringContaining('Newer, moved up'),
       expect.stringContaining('Older, held back'),
     ])
+  })
+})
+
+describe('the Recurring group is presented ahead of the priority groups (10.3)', () => {
+  it('renders a "Recurring" heading ahead of the Urgent heading', async () => {
+    const recurring = makeTask({
+      id: 'recurring-1',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+    })
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurring, urgent])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurring.id, urgent.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const headings = screen.getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+    ])
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    expect(within(recurringGroup).getByText('Weekly review')).toBeTruthy()
+  })
+
+  it('omits the "Recurring" heading entirely when no recurring task is present', async () => {
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+    })
+    const medium = makeTask({
+      id: 'medium-1',
+      name: 'Medium task',
+      priority: 'medium',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgent, medium])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [urgent.id, medium.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    expect(screen.queryByRole('heading', { name: 'Recurring' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Recurring' })).toBeNull()
+
+    const headings = screen.getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Urgent',
+      'Medium',
+    ])
+  })
+})
+
+describe('the Today tab places a due recurring task under Recurring only (10.4)', () => {
+  it('never shows a recurring task under a priority heading', async () => {
+    const recurring = makeTask({
+      id: 'recurring-1',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+    })
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+    const medium = makeTask({
+      id: 'medium-1',
+      name: 'Medium task',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurring, urgent, medium])
+    // `plannedIds` stands in for a due recurring task's membership in
+    // today's plan (see design.md, decision 9 — a due recurring task enters
+    // `plannedIds` through the ordinary `recomputeSnapshot` path); this
+    // section only needs to prove the grouping/rendering side, not
+    // re-derive due-ness, which sections 5/6/8 already pin.
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurring.id, urgent.id, medium.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const headings = within(todaySection).getAllByRole('heading', {
+      level: 3,
+    })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+      'Medium',
+    ])
+
+    const recurringGroup = within(todaySection).getByRole('region', {
+      name: 'Recurring',
+    })
+    expect(within(recurringGroup).getByText('Weekly review')).toBeTruthy()
+
+    const urgentGroup = within(todaySection).getByRole('region', {
+      name: 'Urgent',
+    })
+    const mediumGroup = within(todaySection).getByRole('region', {
+      name: 'Medium',
+    })
+    expect(within(urgentGroup).queryByText('Weekly review')).toBeNull()
+    expect(within(mediumGroup).queryByText('Weekly review')).toBeNull()
+  })
+})
+
+describe('the All tab groups recurring tasks under Recurring, ordered by place (10.5)', () => {
+  it('places the Recurring group ahead of every priority group, ordered by place within it', async () => {
+    // The worked example from specs/task-views/spec.md, "The All tab orders
+    // the Recurring group ahead of every priority".
+    const m1 = makeTask({
+      id: 'm1',
+      name: 'M1',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+      place: 1,
+    })
+    const r1 = makeTask({
+      id: 'r1',
+      name: 'R1',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 2,
+    })
+    const u1 = makeTask({
+      id: 'u1',
+      name: 'U1',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      place: 3,
+    })
+    const r2 = makeTask({
+      id: 'r2',
+      name: 'R2',
+      priority: null,
+      recurrence: { kind: 'monthly-weekday', nth: 1, weekday: 1 },
+      createdAt: new Date('2026-08-18T11:00:00.000Z'),
+      place: 4,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([m1, r1, u1, r2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const headings = within(allSection).getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+      'Medium',
+    ])
+
+    const items = within(allSection).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('R1'),
+      expect.stringContaining('R2'),
+      expect.stringContaining('U1'),
+      expect.stringContaining('M1'),
+    ])
+
+    const recurringGroup = within(allSection).getByRole('region', {
+      name: 'Recurring',
+    })
+    expect(
+      within(recurringGroup)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([expect.stringContaining('R1'), expect.stringContaining('R2')])
+  })
+})
+
+describe('the All tab lists every recurring task regardless of due-ness or completion (11.1)', () => {
+  it('lists a due recurring task, an at-rest one, and one completed moments ago', async () => {
+    const due = makeTask({
+      id: 'due-recurring',
+      name: 'Due recurring',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: null,
+      completedAt: null,
+    })
+    // At rest: its last completion has not yet been cleared by reawakening,
+    // because its rule has not produced a new occurrence since (see
+    // src/domain/recurrence.ts, `reawaken` — `completedAt` is only cleared
+    // when the task becomes due again), and it is not part of today's plan.
+    const atRest = makeTask({
+      id: 'at-rest-recurring',
+      name: 'At rest recurring',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-08-17',
+      completedAt: new Date('2026-08-17T09:00:00.000Z'),
+    })
+    const justCompleted = makeTask({
+      id: 'just-completed-recurring',
+      name: 'Just completed recurring',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-08-18',
+      completedAt: new Date('2026-08-18T08:30:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([due, atRest, justCompleted])
+    // `plannedIds` stands in for due-ness, as section 10's tests already do
+    // (see the 10.4 test above): `due` and `justCompleted` are in today's
+    // plan, `atRest` is not (see design.md, decisions 2 and 9) — this
+    // section only needs to prove the All tab's membership rule, not
+    // re-derive due-ness, which sections 5/6/8 already pin.
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [due.id, justCompleted.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).getByText('Due recurring')).toBeTruthy()
+    expect(within(allSection).getByText('At rest recurring')).toBeTruthy()
+    expect(
+      within(allSection).getByText('Just completed recurring'),
+    ).toBeTruthy()
+  })
+})
+
+describe('the Completed tab never lists a recurring task (11.2)', () => {
+  it('excludes a recurring task whether it is currently completed or has a history of past completions', async () => {
+    const currentlyCompleted = makeTask({
+      id: 'recurring-completed-now',
+      name: 'Completed just now',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-08-18',
+      completedAt: new Date('2026-08-18T08:30:00.000Z'),
+    })
+    // The domain records only the most recent completion date, never a
+    // count (see proposal.md, "No completion history"), so a task
+    // completed on many past occasions is indistinguishable from one
+    // completed once: an old `lastCompletedOn`, with `completedAt` still
+    // set because it has not yet reawoken (see recurrence.ts, `reawaken`).
+    const repeatedlyCompleted = makeTask({
+      id: 'recurring-repeatedly-completed',
+      name: 'Completed many times before',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-07-27',
+      completedAt: new Date('2026-07-27T09:00:00.000Z'),
+    })
+    const oneOffCompleted = makeTask({
+      id: 'one-off-completed',
+      name: 'One-off completed',
+      completedAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([
+      currentlyCompleted,
+      repeatedlyCompleted,
+      oneOffCompleted,
+    ])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [currentlyCompleted.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('Completed')
+
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    expect(
+      within(completedSection).queryByText('Completed just now'),
+    ).toBeNull()
+    expect(
+      within(completedSection).queryByText('Completed many times before'),
+    ).toBeNull()
+    expect(within(completedSection).getByText('One-off completed')).toBeTruthy()
+  })
+})
+
+describe('completing a recurring task from the All tab has a three-tab consequence (11.3)', () => {
+  it('leaves it in All, strikes it through in Today, and adds nothing to Completed', async () => {
+    const recurring = makeTask({
+      id: 'recurring-1',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: null,
+      completedAt: null,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurring])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurring.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const item = within(allSection).getByText('Weekly review').closest('li')
+    if (!item) throw new Error('expected a list item')
+    fireEvent.click(within(item).getByRole('checkbox'))
+
+    // Stays listed in All, now checked — a completed recurring task is not
+    // removed from All the way a completed one-off task is (see
+    // specs/task-views/spec.md, "Completing a recurring task from the All
+    // tab"). Re-queried from `allSection` rather than reusing `item`/its
+    // checkbox, so that a regression that removes the row from the DOM
+    // fails this `waitFor` instead of reading a stale, detached node.
+    await waitFor(() => {
+      const stillItem = within(allSection)
+        .getByText('Weekly review')
+        .closest('li')
+      if (!stillItem) throw new Error('expected a list item')
+      const checkbox = within(stillItem).getByRole(
+        'checkbox',
+      ) as HTMLInputElement
+      expect(checkbox.checked).toBe(true)
+    })
+
+    switchTab('Today')
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const struck = within(todaySection).getByText('Weekly review')
+    expect(struck.tagName).toBe('S')
+
+    switchTab('Completed')
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    expect(within(completedSection).queryByText('Weekly review')).toBeNull()
+  })
+})
+
+describe('Today and All diverge when only at-rest recurring tasks exist (11.4)', () => {
+  it("shows Today's empty state while All lists the at-rest recurring tasks and shows no empty state", async () => {
+    const atRest1 = makeTask({
+      id: 'at-rest-1',
+      name: 'At rest recurring 1',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-08-17',
+      completedAt: new Date('2026-08-17T09:00:00.000Z'),
+    })
+    const atRest2 = makeTask({
+      id: 'at-rest-2',
+      name: 'At rest recurring 2',
+      priority: null,
+      recurrence: { kind: 'monthly-weekday', nth: 1, weekday: 1 },
+      lastCompletedOn: '2026-08-03',
+      completedAt: new Date('2026-08-03T09:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([atRest1, atRest2])
+    // Neither is in `plannedIds`: both are at rest, standing in for the
+    // due-ness sections 5/6/8 already pin (as in the 10.4 test above).
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    expect(within(todaySection).getByText('empty')).toBeTruthy()
+    expect(within(todaySection).queryByText('At rest recurring 1')).toBeNull()
+    expect(within(todaySection).queryByText('At rest recurring 2')).toBeNull()
+
+    switchTab('All')
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    expect(within(allSection).queryByText('empty')).toBeNull()
+    expect(within(allSection).getByText('At rest recurring 1')).toBeTruthy()
+    expect(within(allSection).getByText('At rest recurring 2')).toBeTruthy()
+  })
+})
+
+describe('the Completed tab shows its empty state when only recurring completions have happened (11.5)', () => {
+  it('shows the empty state though a recurring task has been completed', async () => {
+    const recurringCompleted = makeTask({
+      id: 'recurring-completed',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      lastCompletedOn: '2026-08-18',
+      completedAt: new Date('2026-08-18T08:30:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurringCompleted])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurringCompleted.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('Completed')
+
+    const completedSection = screen.getByRole('region', {
+      name: 'Completed tasks',
+    })
+    expect(within(completedSection).getByText('empty')).toBeTruthy()
+    expect(within(completedSection).queryByText('Weekly review')).toBeNull()
   })
 })
 

@@ -1,19 +1,49 @@
 import { describe, expect, it } from 'vitest'
 import type { Task } from './task'
 import { reorderWithinPriority } from './task'
+import type { RecurrenceRule } from './recurrence'
 import { compareForSelection, selectDailyPlan } from './dailyPlan'
+
+// Used as `now` by every test in this file that does not itself depend on
+// today's date (i.e. every test predating recurring tasks): fixed so the
+// suite is deterministic, matching `makeTask`'s own fixed `createdAt`.
+const now = new Date('2026-08-17T09:00:00Z')
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
+
+const WEEKLY_MONDAY: RecurrenceRule = { kind: 'weekly', weekdays: [1] }
+
+// A due recurring task by default: created the Monday before `RECURRING_NOW`
+// (below), on the same weekly-Monday rule, never completed. Constructed with
+// the local `Date` constructor — not a UTC ISO string — so `toLocalDateString`
+// resolves to the intended calendar date regardless of the test
+// environment's time zone (see src/domain/recurrence.test.ts's own
+// convention).
+function makeRecurringTask(overrides: Partial<Task> & { id: string }): Task {
+  return makeTask({
+    priority: null,
+    recurrence: WEEKLY_MONDAY,
+    createdAt: new Date(2026, 7, 17), // Mon 17 Aug 2026
+    lastCompletedOn: null,
+    ...overrides,
+  })
+}
+
+// Monday 24 August 2026 — a week after the recurring tasks' default
+// `createdAt` above, and itself a Monday, so `WEEKLY_MONDAY` fires on it.
+const RECURRING_NOW = new Date(2026, 7, 24, 9, 0, 0)
 
 describe('compareForSelection', () => {
   it('orders by priority first, most important before least', () => {
@@ -141,6 +171,38 @@ describe('compareForSelection', () => {
 
     expect(sorted.map((task) => task.id)).toEqual(['B', 'E', 'C', 'A', 'D'])
   })
+
+  // 5.1: a recurring task sorts ahead of every priority level, including
+  // urgent (see design.md, decision 6, and specs/daily-plan/spec.md,
+  // "Ordering within the selection": "Due recurring tasks SHALL be
+  // considered before every one-off task, whatever its priority").
+  it('orders a recurring task ahead of every priority level, including urgent', () => {
+    const urgent = makeTask({ id: 'urgent', priority: 'urgent', place: 0 })
+    const recurring = makeRecurringTask({ id: 'R1', place: 5 })
+
+    const sorted = [urgent, recurring].sort(compareForSelection)
+
+    expect(sorted.map((task) => task.id)).toEqual(['R1', 'urgent'])
+  })
+
+  // 5.1: two recurring tasks are ordered by place, and both precede an
+  // urgent task even though the urgent task holds an earlier place (spec:
+  // "Recurring tasks are considered in their arranged order, ahead of
+  // everything").
+  it('orders two recurring tasks by place, both preceding urgent (spec: Recurring tasks are considered in their arranged order, ahead of everything)', () => {
+    const u1 = makeTask({
+      id: 'U1',
+      priority: 'urgent',
+      duration: 15,
+      place: 1,
+    })
+    const r2 = makeRecurringTask({ id: 'R2', duration: 10, place: 2 })
+    const r1 = makeRecurringTask({ id: 'R1', duration: 20, place: 3 })
+
+    const sorted = [u1, r2, r1].sort(compareForSelection)
+
+    expect(sorted.map((task) => task.id)).toEqual(['R2', 'R1', 'U1'])
+  })
 })
 
 describe('selectDailyPlan', () => {
@@ -178,7 +240,7 @@ describe('selectDailyPlan', () => {
       place: 3,
     })
 
-    const plan = selectDailyPlan([t1, t2, t3, t4])
+    const plan = selectDailyPlan([t1, t2, t3, t4], now)
 
     expect(plan.map((task) => task.id)).toEqual(['T1', 'T2', 'T3'])
     expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(65)
@@ -211,7 +273,7 @@ describe('selectDailyPlan', () => {
       place: 2,
     })
 
-    const plan = selectDailyPlan([h1, m1, l1])
+    const plan = selectDailyPlan([h1, m1, l1], now)
 
     expect(plan.map((task) => task.id)).toEqual(['H1', 'M1'])
   })
@@ -245,7 +307,7 @@ describe('selectDailyPlan', () => {
       place: 2,
     })
 
-    const plan = selectDailyPlan([u1, u2, h1])
+    const plan = selectDailyPlan([u1, u2, h1], now)
 
     expect(plan.map((task) => task.id)).toEqual(['U1', 'U2'])
     expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(75)
@@ -266,13 +328,13 @@ describe('selectDailyPlan', () => {
       createdAt: new Date('2026-08-17T09:01:00Z'),
     })
 
-    const plan = selectDailyPlan([completedUrgent, pendingLow])
+    const plan = selectDailyPlan([completedUrgent, pendingLow], now)
 
     expect(plan.map((task) => task.id)).toEqual(['pending-low'])
   })
 
   it('returns an empty plan for an empty task list', () => {
-    expect(selectDailyPlan([])).toEqual([])
+    expect(selectDailyPlan([], now)).toEqual([])
   })
 
   it('returns an empty plan when every task is already completed', () => {
@@ -283,7 +345,7 @@ describe('selectDailyPlan', () => {
       completedAt: new Date('2026-08-17T10:00:00Z'),
     })
 
-    expect(selectDailyPlan([completed])).toEqual([])
+    expect(selectDailyPlan([completed], now)).toEqual([])
   })
 })
 
@@ -315,7 +377,7 @@ describe('selectDailyPlan under a reordering', () => {
     const l1 = makeTask({ id: 'L1', priority: 'low', duration: 10, place: 5 })
     const tasks = [h1, m1, m2, m3, l1]
 
-    const initialPlan = selectDailyPlan(tasks)
+    const initialPlan = selectDailyPlan(tasks, now)
     expect(initialPlan.map((task) => task.id)).toEqual(['H1', 'M1', 'M2'])
     expect(initialPlan.reduce((total, task) => total + task.duration, 0)).toBe(
       75,
@@ -326,7 +388,7 @@ describe('selectDailyPlan under a reordering', () => {
     // computation yields.
     const reordered = reorderWithinPriority(tasks, 'M3', 'M1')
 
-    const nextPlan = selectDailyPlan(reordered)
+    const nextPlan = selectDailyPlan(reordered, now)
     expect(nextPlan.map((task) => task.id)).toEqual(['H1', 'M3', 'M1'])
     expect(nextPlan.reduce((total, task) => total + task.duration, 0)).toBe(65)
 
@@ -361,7 +423,7 @@ describe('selectDailyPlan under a reordering', () => {
     const tasks = [u1, u2, u3, h1]
 
     function assertUrgentsSurvive(arranged: Task[]) {
-      const plan = selectDailyPlan(arranged)
+      const plan = selectDailyPlan(arranged, now)
       expect(plan.map((task) => task.id).sort()).toEqual(['U1', 'U2', 'U3'])
       expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(75)
       expect(plan.some((task) => task.id === 'H1')).toBe(false)
@@ -385,7 +447,7 @@ describe('selectDailyPlan under a reordering', () => {
     })
     const tasks = [h1, h2, m1]
 
-    const initialPlan = selectDailyPlan(tasks)
+    const initialPlan = selectDailyPlan(tasks, now)
     expect(initialPlan.map((task) => task.id)).toEqual(['H1', 'H2', 'M1'])
     expect(initialPlan.reduce((total, task) => total + task.duration, 0)).toBe(
       65,
@@ -394,7 +456,7 @@ describe('selectDailyPlan under a reordering', () => {
     // The user moves H2 above H1 — a real reorder within the high level,
     // which is wholly inside the plan.
     const reordered = reorderWithinPriority(tasks, 'H2', 'H1')
-    const nextPlan = selectDailyPlan(reordered)
+    const nextPlan = selectDailyPlan(reordered, now)
 
     expect(nextPlan.map((task) => task.id)).toEqual(['H2', 'H1', 'M1'])
     expect(nextPlan.reduce((total, task) => total + task.duration, 0)).toBe(65)
@@ -415,7 +477,7 @@ describe('selectDailyPlan under a reordering', () => {
     const l2 = makeTask({ id: 'L2', priority: 'low', duration: 5, place: 5 })
     const tasks = [h1, h2, m1, l1, l2]
 
-    const initialPlan = selectDailyPlan(tasks)
+    const initialPlan = selectDailyPlan(tasks, now)
     expect(initialPlan.map((task) => task.id)).toEqual(['H1', 'H2', 'M1'])
     expect(initialPlan.reduce((total, task) => total + task.duration, 0)).toBe(
       65,
@@ -429,11 +491,120 @@ describe('selectDailyPlan under a reordering', () => {
     expect(l1AfterReorder?.place).toBe(5)
     expect(l2AfterReorder?.place).toBe(4)
 
-    const nextPlan = selectDailyPlan(reordered)
+    const nextPlan = selectDailyPlan(reordered, now)
     expect(nextPlan.map((task) => task.id)).toEqual(['H1', 'H2', 'M1'])
     expect(nextPlan.reduce((total, task) => total + task.duration, 0)).toBe(65)
     expect(nextPlan.some((task) => task.id === 'L1' || task.id === 'L2')).toBe(
       false,
     )
+  })
+})
+
+describe('selectDailyPlan with recurring tasks', () => {
+  // 5.2: a due recurring task's duration is reserved before any one-off
+  // task is considered (spec: "A due recurring task is considered before
+  // every priority level").
+  it("reserves a due recurring task's duration before one-off tasks are considered (spec: A due recurring task is considered before every priority level)", () => {
+    const r1 = makeRecurringTask({ id: 'R1', duration: 30, place: 0 })
+    const h1 = makeTask({ id: 'H1', priority: 'high', duration: 45, place: 1 })
+    const m1 = makeTask({
+      id: 'M1',
+      priority: 'medium',
+      duration: 20,
+      place: 2,
+    })
+    const l1 = makeTask({ id: 'L1', priority: 'low', duration: 10, place: 3 })
+
+    const plan = selectDailyPlan([r1, h1, m1, l1], RECURRING_NOW)
+
+    expect(plan.map((task) => task.id)).toEqual(['R1', 'H1'])
+    expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(75)
+  })
+
+  // 5.3: the same three one-off tasks, on a day when R1 is at rest, yield a
+  // different plan — R1 contributes nothing (spec: "A recurring task at
+  // rest reserves nothing"). R1 is constructed pending (`completedAt` is
+  // still `null`, inherited from `makeTask`'s default) but already cleared
+  // for today's occurrence via `lastCompletedOn`, so it is excluded by the
+  // due-ness check this section adds — not merely by the pre-existing
+  // completed-task filter, which this fixture deliberately does not rely
+  // on.
+  it('lets the same one-off tasks use the full budget when the recurring task is at rest instead (spec: A recurring task at rest reserves nothing)', () => {
+    const r1 = makeRecurringTask({
+      id: 'R1',
+      duration: 30,
+      place: 0,
+      lastCompletedOn: '2026-08-24',
+    })
+    const h1 = makeTask({ id: 'H1', priority: 'high', duration: 45, place: 1 })
+    const m1 = makeTask({
+      id: 'M1',
+      priority: 'medium',
+      duration: 20,
+      place: 2,
+    })
+    const l1 = makeTask({ id: 'L1', priority: 'low', duration: 10, place: 3 })
+
+    const plan = selectDailyPlan([r1, h1, m1, l1], RECURRING_NOW)
+
+    expect(plan.map((task) => task.id)).toEqual(['H1', 'M1'])
+    expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(65)
+    expect(plan.some((task) => task.id === 'R1')).toBe(false)
+  })
+
+  // 5.4: recurring work alone can crowd out even a short one-off task
+  // (spec: "Recurring work alone exceeds the budget").
+  it('lets recurring work alone crowd out a short high-priority task (spec: Recurring work alone exceeds the budget)', () => {
+    const r1 = makeRecurringTask({ id: 'R1', duration: 45, place: 0 })
+    const r2 = makeRecurringTask({ id: 'R2', duration: 30, place: 1 })
+    const h1 = makeTask({ id: 'H1', priority: 'high', duration: 5, place: 2 })
+
+    const plan = selectDailyPlan([r1, r2, h1], RECURRING_NOW)
+
+    expect(plan.map((task) => task.id)).toEqual(['R1', 'R2'])
+    expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(75)
+    expect(plan.some((task) => task.id === 'H1')).toBe(false)
+  })
+
+  // Strengthens 5.4: a due recurring task is included unconditionally even
+  // once an earlier due recurring task has already pushed the running total
+  // to or past the budget on its own — proving inclusion does not merely
+  // coincide with the budget still having room (see design.md, decision 6:
+  // "Every included task... adds its duration to the running total"
+  // regardless of unconditional membership, and unconditional inclusion
+  // does not stop once the total reaches 60).
+  it('includes a second due recurring task even once the first alone has already reached the budget', () => {
+    const r1 = makeRecurringTask({ id: 'R1', duration: 60, place: 0 })
+    const r2 = makeRecurringTask({ id: 'R2', duration: 10, place: 1 })
+
+    const plan = selectDailyPlan([r1, r2], RECURRING_NOW)
+
+    expect(plan.map((task) => task.id)).toEqual(['R1', 'R2'])
+    expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(70)
+  })
+
+  // 5.5: a due recurring task and an urgent task are both included, and the
+  // running total once both are considered is the same, whichever order
+  // they are given in — membership does not depend on the order they are
+  // considered in (spec: "Which of recurring and urgent comes first does
+  // not change the plan"; design.md, decision 6).
+  it('includes a due recurring task and an urgent task regardless of the order they are considered in, with the same running total either way (spec: Which of recurring and urgent comes first does not change the plan)', () => {
+    const r1 = makeRecurringTask({ id: 'R1', duration: 30, place: 0 })
+    const u1 = makeTask({
+      id: 'U1',
+      priority: 'urgent',
+      duration: 45,
+      place: 1,
+    })
+    const h1 = makeTask({ id: 'H1', priority: 'high', duration: 5, place: 2 })
+
+    const planRecurringFirst = selectDailyPlan([r1, u1, h1], RECURRING_NOW)
+    const planUrgentFirst = selectDailyPlan([u1, r1, h1], RECURRING_NOW)
+
+    for (const plan of [planRecurringFirst, planUrgentFirst]) {
+      expect(plan.map((task) => task.id).sort()).toEqual(['R1', 'U1'])
+      expect(plan.reduce((total, task) => total + task.duration, 0)).toBe(75)
+      expect(plan.some((task) => task.id === 'H1')).toBe(false)
+    }
   })
 })

@@ -46,6 +46,14 @@
   background: var(--priority-very-low-marker);
 }
 
+/* The Recurring group's marker, in the shared recurring color token — the
+   same one used by the row's rule badge and the form's recurring choice
+   once selected (see specs/appearance/spec.md, "Recurring tasks have their
+   own color in both themes"). */
+.priority-group__marker[data-priority='recurring'] {
+  background: var(--recurring-marker);
+}
+
 .priority-group__title {
   font-size: 12px;
   font-weight: 700;

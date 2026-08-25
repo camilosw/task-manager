@@ -1,10 +1,4 @@
-# task-management Specification
-
-## Purpose
-
-Defines the task entity and everything a user can do to a single task: what a task is made of, the fixed set of durations and priority levels it may take, and how tasks are created, edited, deleted, and completed.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Task attributes
 
@@ -70,90 +64,6 @@ Given three existing medium tasks, arranged by the user in the order shown:
 - **THEN** the new task takes a place after every existing task
 - **AND** it appears last among the recurring tasks
 - **AND** the order of every priority level is unchanged
-
-### Requirement: Reordering a task within its priority level
-
-The user SHALL be able to move a task to a different place among the tasks of its own priority level. Reordering SHALL exchange places only among the tasks of that level: no task of another priority level SHALL change place relative to any other task as a result.
-
-Reordering SHALL NOT change a task's priority, name, duration, creation timestamp, or completion state. A reordering SHALL be recorded as soon as it is made, without a separate confirming action.
-
-#### Scenario: Moving a task up its level
-
-Given six pending tasks in the places shown:
-
-| Place | Task | Priority |
-| ----- | ---- | -------- |
-| 1     | H1   | high     |
-| 2     | M1   | medium   |
-| 3     | M2   | medium   |
-| 4     | M3   | medium   |
-| 5     | H2   | high     |
-| 6     | L1   | low      |
-
-The medium tasks hold places 2, 3, and 4, in the order M1, M2, M3.
-
-- **WHEN** the user moves M3 above M1
-- **THEN** the medium tasks are ordered M3, M1, M2, holding the same places 2, 3, and 4 between them
-- **AND** M3 holds place 2, M1 holds place 3, and M2 holds place 4
-- **AND** H1 still holds place 1, H2 still holds place 5, and L1 still holds place 6
-- **AND** the high tasks are still ordered H1, H2
-
-#### Scenario: Reordering leaves every other level untouched
-
-- **WHEN** the user reorders the tasks of one priority level
-- **THEN** the order of the tasks of every other priority level is unchanged
-- **AND** no task changes its priority level
-
-#### Scenario: A reordering survives a restart
-
-- **WHEN** the user reorders tasks and then closes and reopens the application
-- **THEN** the tasks appear in the order the user arranged
-
-### Requirement: A task keeps its place when its priority changes
-
-Editing a task's priority SHALL NOT change its place in the order. The task SHALL therefore appear among the tasks of its new priority level at the position that place gives it, rather than being moved to the start or the end of that level.
-
-Because a task that has never been reordered holds a place matching its creation order, a task promoted or demoted into a level whose tasks have never been reordered SHALL appear among them oldest first.
-
-#### Scenario: A promoted task lands among its new peers by its place
-
-Given four pending tasks, none ever reordered, so their places match their creation order:
-
-| Place | Task | Created | Priority |
-| ----- | ---- | ------- | -------- |
-| 1     | A    | 08:00   | low      |
-| 2     | B    | 09:00   | high     |
-| 3     | C    | 10:00   | high     |
-| 4     | D    | 11:00   | low      |
-
-- **WHEN** the user edits A and sets its priority to high
-- **THEN** A keeps place 1
-- **AND** the high tasks are ordered A, B, C
-- **AND** A appears first among the high tasks, not last, because its place precedes both B's and C's
-
-#### Scenario: A promoted task lands by its place, not by its age, when peers have been reordered
-
-Continuing from the arrangement above, the user first moves C above B, so C holds place 2 and B holds place 3.
-
-- **WHEN** the user then edits A and sets its priority to high
-- **THEN** A keeps place 1
-- **AND** the high tasks are ordered A, C, B
-
-#### Scenario: A demoted task keeps its place too
-
-- **WHEN** the user lowers a task's priority to a level that already contains tasks
-- **THEN** the task keeps the place it held
-- **AND** it appears among the tasks of its new level at the position that place gives it
-
-### Requirement: Duration is chosen from a fixed set
-
-Task duration SHALL be selected from exactly nine options: 5, 10, 15, 20, 30, 45, 60, 90, and 120 minutes. The system SHALL NOT accept a duration outside this set, and SHALL NOT offer free-text entry of a duration.
-
-#### Scenario: The nine options are offered
-
-- **WHEN** the user is creating or editing a task
-- **THEN** exactly nine duration choices are presented — 5m, 10m, 15m, 20m, 30m, 45m, 1h, 1.5h, and 2h
-- **AND** the user selects one of them rather than typing a value
 
 ### Requirement: Five priority levels with a defined order
 
@@ -240,21 +150,6 @@ The user SHALL be able to change an existing task's name, duration, and either i
 - **WHEN** the user attempts to save an edit that would leave a task without a priority and without a complete repetition rule
 - **THEN** the edit is rejected and the task keeps its previous values
 - **AND** the user is shown what is missing
-
-### Requirement: Deleting a task
-
-The user SHALL be able to delete a task. A deleted task SHALL disappear from every tab and SHALL NOT be counted in any daily plan.
-
-#### Scenario: A deleted task disappears everywhere
-
-- **WHEN** the user deletes a task
-- **THEN** the task is no longer shown in the Today, All, or Completed tab
-
-#### Scenario: Deleting a task that is part of today's plan
-
-- **WHEN** the user deletes a task that is currently shown in the Today tab
-- **THEN** the task is removed from the Today tab immediately
-- **AND** no replacement task is pulled into the Today tab to fill the freed time
 
 ### Requirement: Completing a task
 
@@ -353,41 +248,6 @@ The form SHALL close when the user cancels it, when the user dismisses it, and w
 - **WHEN** the creation form has been opened and then closed
 - **THEN** the tab that was in view is fully visible and usable again
 
-### Requirement: A pending task is completed through a checkbox on its row
-
-Every task row SHALL carry a checkbox reflecting that task's completion state: unchecked while the task is pending, checked once it is completed. Checking the box of a pending task SHALL complete it. The checkbox of an already-completed task SHALL NOT be interactive, so completion cannot be undone by unchecking it. The checkbox SHALL be reachable and operable from the keyboard, and SHALL be associated with its task's name so that its purpose is unambiguous when the row is read out of context.
-
-#### Scenario: Completing a task from its checkbox
-
-- **WHEN** the user checks the checkbox on a pending task's row
-- **THEN** the task is marked completed with the time of completion
-- **AND** the checkbox is shown checked
-
-#### Scenario: A completed task's checkbox cannot be unchecked
-
-- **WHEN** a completed task's row is displayed
-- **THEN** its checkbox is shown checked
-- **AND** the checkbox is not interactive
-- **AND** activating it leaves the task completed
-
-#### Scenario: The checkbox is identifiable per task
-
-- **WHEN** a row for the task "Submit quarterly report" is displayed
-- **THEN** that row's checkbox is associated with the name "Submit quarterly report"
-
-#### Scenario: The checkbox in each tab
-
-- **WHEN** the Today tab shows a pending task and a task completed earlier today
-- **THEN** the pending task's checkbox is unchecked and interactive
-- **AND** the completed task's checkbox is checked and not interactive
-- **AND** every checkbox in the All tab is unchecked and interactive, because that tab lists only pending tasks
-- **AND** every checkbox in the Completed tab is checked and not interactive
-
-#### Scenario: Completing from the keyboard
-
-- **WHEN** the user moves focus to a pending task's checkbox and activates it from the keyboard
-- **THEN** the task is completed
-
 ### Requirement: Editing and deleting are named controls on every task row
 
 Each task row SHALL offer a control to edit the task and a control to delete it. Where these controls are drawn as icons without visible text, each SHALL carry an accessible name — "Edit" and "Delete" respectively — so the action is identifiable without seeing the icon. Both SHALL be reachable and operable from the keyboard. Deletion SHALL take effect immediately, with no intermediate confirmation step.
@@ -422,6 +282,8 @@ Each task row SHALL offer a control to edit the task and a control to delete it.
 - **WHEN** the user deletes a recurring task
 - **THEN** the task is gone from every tab
 - **AND** it does not return at its next occurrence
+
+## ADDED Requirements
 
 ### Requirement: The creation and edit form offers a task type and a rule builder
 

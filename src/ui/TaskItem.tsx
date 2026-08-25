@@ -1,5 +1,7 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { formatDuration } from '../domain/duration'
+import type { Priority } from '../domain/priority'
+import { formatRule } from '../domain/recurrence'
 import type {
   EditTaskInput,
   EditTaskResult,
@@ -35,13 +37,17 @@ export type TaskItemProps = {
 /**
  * A single task row: read-only by default, switching to an inline
  * `TaskForm` while editing (see specs/task-management/spec.md, "Editing a
- * task"). Duration and priority are always pre-filled from the existing
- * task and can only be reassigned to another fixed option, never cleared,
- * so the only edit-time validation failure possible is a blank name — the
- * `duration`/`priority` branch below only guards against that being
- * impossible in practice.
+ * task"). Duration, and either priority or a repetition rule, are always
+ * pre-filled from the existing task and can only be reassigned to another
+ * fixed option, never cleared — the `duration` check in `handleEditSubmit`
+ * below only guards against `values.duration` being `undefined` in
+ * `TaskFormValues`'s type, which is impossible in practice here; the
+ * priority/recurrence mutual exclusion, and a blank name, are left for
+ * `editTask` (via `onEdit`) to validate, same as `TaskForm` leaves it there
+ * on creation (see design.md, decision 1).
  *
- * Name, duration and an identifiable priority are always visible (see
+ * Name, duration, and either an identifiable priority or — for a recurring
+ * task — a text description of its repetition rule are always visible (see
  * specs/task-views/spec.md, "Every task display shows name, duration, and
  * priority"). Completion is driven by a checkbox that persists across the
  * pending -> completed transition rather than a button that disappears:
@@ -70,17 +76,18 @@ export function TaskItem({
   const nameId = useId()
 
   async function handleEditSubmit(values: TaskFormValues) {
-    if (values.duration === undefined || values.priority === undefined) {
-      const errors: TaskValidationField[] = []
-      if (values.duration === undefined) errors.push('duration')
-      if (values.priority === undefined) errors.push('priority')
-      return { ok: false as const, errors }
+    if (values.duration === undefined) {
+      return {
+        ok: false as const,
+        errors: ['duration'] as TaskValidationField[],
+      }
     }
 
     const result = await onEdit(task.id, {
       name: values.name,
       duration: values.duration,
       priority: values.priority,
+      recurrence: values.recurrence,
     })
     if (result.ok) {
       setIsEditing(false)
@@ -102,7 +109,12 @@ export function TaskItem({
           initialValues={{
             name: task.name,
             duration: task.duration,
-            priority: task.priority,
+            // `task.priority`/`task.recurrence` are `Priority | null` /
+            // `RecurrenceRule | null` (tasks.md section 3): exactly one is
+            // set, mirroring `TaskFormValues`'s own mutual exclusion, so
+            // `?? undefined` on both is a type-only coercion.
+            priority: task.priority ?? undefined,
+            recurrence: task.recurrence ?? undefined,
           }}
           onSubmit={handleEditSubmit}
           onCancel={() => setIsEditing(false)}
@@ -137,9 +149,19 @@ export function TaskItem({
           <span className="task-row__duration">
             {formatDuration(task.duration)}
           </span>
-          <span className="task-row__priority" data-priority={task.priority}>
-            {PRIORITY_LABELS[task.priority]}
-          </span>
+          {task.recurrence !== null ? (
+            // A recurring task shows its rule in the same slot a one-off
+            // task shows its priority, and no priority name at all — it has
+            // none (see specs/task-views/spec.md, "Every task display shows
+            // name, duration, and priority", and design.md, decision 11).
+            <span className="task-row__recurrence" data-recurring="true">
+              {formatRule(task.recurrence, 'short')}
+            </span>
+          ) : (
+            <span className="task-row__priority" data-priority={task.priority}>
+              {PRIORITY_LABELS[task.priority as Priority]}
+            </span>
+          )}
         </div>
       </div>
       <div className="task-row__actions">
