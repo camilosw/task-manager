@@ -106,6 +106,59 @@ describe("a completed task's checkbox (6.2)", () => {
   })
 })
 
+describe('a recurring row shows its rule instead of a priority (10.1)', () => {
+  it('shows duration and a text rule description as separate elements, and no priority name', () => {
+    const task = makeTask({
+      id: 't1',
+      name: 'Weekly review',
+      duration: 30,
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1, 3] },
+    })
+    renderItem(task)
+
+    const item = screen.getByText('Weekly review').closest('li')
+    if (!item) throw new Error('expected a list item')
+
+    const duration = within(item).getByText('30m')
+    const rule = within(item).getByText('Every Mon and Wed')
+    // Each is its own element, distinct from the name and from each other.
+    expect(duration.textContent).toBe('30m')
+    expect(rule.textContent).toBe('Every Mon and Wed')
+    expect(duration).not.toBe(rule)
+
+    // No priority level name appears on the row for a recurring task.
+    for (const label of ['Urgent', 'High', 'Medium', 'Low', 'Very low']) {
+      expect(within(item).queryByText(label)).toBeNull()
+    }
+    expect(item.querySelector('.task-row__priority')).toBeNull()
+  })
+})
+
+describe('a completed recurring row keeps its rule legible (10.2)', () => {
+  it('renders struck through with the rule description still legible', () => {
+    const task = makeTask({
+      id: 't1',
+      name: 'Weekly review',
+      duration: 30,
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      completedAt: new Date('2026-08-18T09:00:00.000Z'),
+      lastCompletedOn: '2026-08-18',
+    })
+    renderItem(task)
+
+    const item = screen.getByText('Weekly review').closest('li')
+    if (!item) throw new Error('expected a list item')
+
+    const struckName = within(item).getByText('Weekly review')
+    expect(struckName.tagName).toBe('S')
+
+    const rule = within(item).getByText('Every Mon')
+    expect(rule.closest('s')).toBeNull()
+  })
+})
+
 describe('edit and delete controls on a task row (6.4)', () => {
   it('exposes native, keyboard-reachable controls named "Edit" and "Delete"', () => {
     const task = makeTask({ id: 't1', name: 'Water the plants' })

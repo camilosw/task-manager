@@ -102,6 +102,22 @@
   color: var(--priority-very-low-fg);
 }
 
+/* A recurring task's rule badge, shown in the same slot a one-off task
+   shows its priority (see specs/task-views/spec.md, "Every task display
+   shows name, duration, and priority"). Reuses the neutral surface/text
+   tokens the duration badge already uses rather than a dedicated color —
+   the Recurring group's own color token is tasks.md section 13's job. */
+.task-row__recurrence {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
 .task-row__actions {
   display: flex;
   gap: 4px;

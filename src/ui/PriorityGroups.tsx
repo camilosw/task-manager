@@ -1,9 +1,30 @@
-import { PRIORITIES } from '../domain/priority'
+import { PRIORITIES, type Priority } from '../domain/priority'
 import type { EditTaskInput, EditTaskResult, Task } from '../domain/task'
 import { EmptyState } from './EmptyState'
 import { PRIORITY_LABELS } from './priorityLabels'
 import { TaskList } from './TaskList'
 import './PriorityGroups.css'
+
+/**
+ * A group's key: one of the five priority levels, or `'recurring'` for the
+ * Recurring group. `task.priority ?? 'recurring'` is the grouping key for
+ * any task (see design.md, decision 11) — a recurring task's `priority` is
+ * always `null` (the mutual-exclusion invariant `createTask`/`editTask`
+ * enforce), so it falls into `'recurring'` with no separate branch needed.
+ */
+type GroupKey = Priority | 'recurring'
+
+/** Recurring first, then the five priority levels in their fixed order —
+ * matching the order `compareForSelection` walks tasks in (see design.md,
+ * decision 6 and decision 11, and specs/task-views/spec.md, "The Today tab
+ * groups tasks by priority" — "a Recurring group first, then the priority
+ * groups"). */
+const GROUP_ORDER: GroupKey[] = ['recurring', ...PRIORITIES]
+
+const GROUP_LABELS: Record<GroupKey, string> = {
+  recurring: 'Recurring',
+  ...PRIORITY_LABELS,
+}
 
 export type PriorityGroupsProps = {
   tasks: Task[]
@@ -16,7 +37,7 @@ export type PriorityGroupsProps = {
 }
 
 /**
- * Groups `tasks` under priority headings, in the fixed order urgent, high,
+ * Groups `tasks` under headings, in the fixed order Recurring, urgent, high,
  * medium, low, very low, and renders each group's tasks through `TaskList`
  * (see specs/task-views/spec.md, "The Today tab groups tasks by priority"
  * and "The All tab groups tasks by priority"). Shared by `TodayTab` and the
@@ -25,19 +46,22 @@ export type PriorityGroupsProps = {
  * decision 5 and the proposal's Impact section: "a candidate for shared
  * rendering rather than a second implementation").
  *
- * `tasks` is rendered in the order it is given — filtering by priority
+ * `tasks` is rendered in the order it is given — filtering by group key
  * (via `Array#filter`, which preserves relative order) is this component's
  * job, but *sorting* within a group is the caller's, since Today and All
  * order their groups by different keys (creation time and place,
  * respectively, as of this section; see TodayTab.tsx and
- * TaskManagerApp.tsx).
+ * TaskManagerApp.tsx) — both of which already sort recurring tasks by
+ * `place` ahead of everything else via `compareForSelection` (see
+ * design.md, decision 6) or the plan's own `place` order, so a flat sort
+ * upstream produces the right order within the Recurring group too.
  *
- * A priority level with no tasks is omitted entirely, heading included —
- * neither the heading nor an empty placeholder is shown (see
- * specs/task-views/spec.md, "Empty priority groups are hidden"). When no
- * group has any tasks, a single empty state is shown in their place, with
- * no priority headings at all (see specs/task-views/spec.md, "The All tab
- * is empty").
+ * A group with no tasks is omitted entirely, heading included — neither the
+ * heading nor an empty placeholder is shown (see specs/task-views/spec.md,
+ * "Empty priority groups are hidden", and "The Recurring group is hidden
+ * when no recurring task is due"). When no group has any tasks, a single
+ * empty state is shown in their place, with no headings at all (see
+ * specs/task-views/spec.md, "The All tab is empty").
  */
 export function PriorityGroups({
   tasks,
@@ -46,9 +70,9 @@ export function PriorityGroups({
   onComplete,
   reorderable,
 }: PriorityGroupsProps) {
-  const groups = PRIORITIES.map((priority) => ({
-    priority,
-    tasks: tasks.filter((task) => task.priority === priority),
+  const groups = GROUP_ORDER.map((key) => ({
+    key,
+    tasks: tasks.filter((task) => (task.priority ?? 'recurring') === key),
   })).filter((group) => group.tasks.length > 0)
 
   if (groups.length === 0) {
@@ -59,8 +83,8 @@ export function PriorityGroups({
     <>
       {groups.map((group) => (
         <section
-          key={group.priority}
-          aria-label={PRIORITY_LABELS[group.priority]}
+          key={group.key}
+          aria-label={GROUP_LABELS[group.key]}
           className="priority-group"
         >
           <div className="priority-group__heading">
@@ -70,12 +94,10 @@ export function PriorityGroups({
                 text" - color reinforces, it never replaces the name). */}
             <span
               className="priority-group__marker"
-              data-priority={group.priority}
+              data-priority={group.key}
               aria-hidden="true"
             />
-            <h3 className="priority-group__title">
-              {PRIORITY_LABELS[group.priority]}
-            </h3>
+            <h3 className="priority-group__title">{GROUP_LABELS[group.key]}</h3>
           </div>
           <TaskList
             tasks={group.tasks}

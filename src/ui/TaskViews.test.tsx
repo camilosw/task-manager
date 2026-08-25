@@ -217,6 +217,215 @@ describe('Today groups order tasks by place, not creation time (9.1)', () => {
   })
 })
 
+describe('the Recurring group is presented ahead of the priority groups (10.3)', () => {
+  it('renders a "Recurring" heading ahead of the Urgent heading', async () => {
+    const recurring = makeTask({
+      id: 'recurring-1',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+    })
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurring, urgent])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurring.id, urgent.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const headings = screen.getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+    ])
+
+    const recurringGroup = screen.getByRole('region', { name: 'Recurring' })
+    expect(within(recurringGroup).getByText('Weekly review')).toBeTruthy()
+  })
+
+  it('omits the "Recurring" heading entirely when no recurring task is present', async () => {
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+    })
+    const medium = makeTask({
+      id: 'medium-1',
+      name: 'Medium task',
+      priority: 'medium',
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([urgent, medium])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [urgent.id, medium.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    expect(screen.queryByRole('heading', { name: 'Recurring' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Recurring' })).toBeNull()
+
+    const headings = screen.getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Urgent',
+      'Medium',
+    ])
+  })
+})
+
+describe('the Today tab places a due recurring task under Recurring only (10.4)', () => {
+  it('never shows a recurring task under a priority heading', async () => {
+    const recurring = makeTask({
+      id: 'recurring-1',
+      name: 'Weekly review',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T06:00:00.000Z'),
+    })
+    const urgent = makeTask({
+      id: 'urgent-1',
+      name: 'Urgent task',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T07:00:00.000Z'),
+    })
+    const medium = makeTask({
+      id: 'medium-1',
+      name: 'Medium task',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([recurring, urgent, medium])
+    // `plannedIds` stands in for a due recurring task's membership in
+    // today's plan (see design.md, decision 9 — a due recurring task enters
+    // `plannedIds` through the ordinary `recomputeSnapshot` path); this
+    // section only needs to prove the grouping/rendering side, not
+    // re-derive due-ness, which sections 5/6/8 already pin.
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [recurring.id, urgent.id, medium.id],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+
+    const todaySection = screen.getByRole('region', { name: 'Today' })
+    const headings = within(todaySection).getAllByRole('heading', {
+      level: 3,
+    })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+      'Medium',
+    ])
+
+    const recurringGroup = within(todaySection).getByRole('region', {
+      name: 'Recurring',
+    })
+    expect(within(recurringGroup).getByText('Weekly review')).toBeTruthy()
+
+    const urgentGroup = within(todaySection).getByRole('region', {
+      name: 'Urgent',
+    })
+    const mediumGroup = within(todaySection).getByRole('region', {
+      name: 'Medium',
+    })
+    expect(within(urgentGroup).queryByText('Weekly review')).toBeNull()
+    expect(within(mediumGroup).queryByText('Weekly review')).toBeNull()
+  })
+})
+
+describe('the All tab groups recurring tasks under Recurring, ordered by place (10.5)', () => {
+  it('places the Recurring group ahead of every priority group, ordered by place within it', async () => {
+    // The worked example from specs/task-views/spec.md, "The All tab orders
+    // the Recurring group ahead of every priority".
+    const m1 = makeTask({
+      id: 'm1',
+      name: 'M1',
+      priority: 'medium',
+      createdAt: new Date('2026-08-18T08:00:00.000Z'),
+      place: 1,
+    })
+    const r1 = makeTask({
+      id: 'r1',
+      name: 'R1',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date('2026-08-18T09:00:00.000Z'),
+      place: 2,
+    })
+    const u1 = makeTask({
+      id: 'u1',
+      name: 'U1',
+      priority: 'urgent',
+      createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      place: 3,
+    })
+    const r2 = makeTask({
+      id: 'r2',
+      name: 'R2',
+      priority: null,
+      recurrence: { kind: 'monthly-weekday', nth: 1, weekday: 1 },
+      createdAt: new Date('2026-08-18T11:00:00.000Z'),
+      place: 4,
+    })
+
+    const repository = createInMemoryRepository()
+    await repository.saveTasks([m1, r1, u1, r2])
+    await repository.saveSnapshot({
+      date: '2026-08-18',
+      plannedIds: [],
+      admittedIds: [],
+    })
+
+    renderApp(repository)
+    await waitForLoaded()
+    switchTab('All')
+
+    const allSection = screen.getByRole('region', { name: 'All tasks' })
+    const headings = within(allSection).getAllByRole('heading', { level: 3 })
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      'Recurring',
+      'Urgent',
+      'Medium',
+    ])
+
+    const items = within(allSection).getAllByRole('listitem')
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining('R1'),
+      expect.stringContaining('R2'),
+      expect.stringContaining('U1'),
+      expect.stringContaining('M1'),
+    ])
+
+    const recurringGroup = within(allSection).getByRole('region', {
+      name: 'Recurring',
+    })
+    expect(
+      within(recurringGroup)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([expect.stringContaining('R1'), expect.stringContaining('R2')])
+  })
+})
+
 describe('shared priority-group rendering (7.1)', () => {
   it("pins the Today tab's grouped output — headings, markers, and hidden empty groups — across the extraction into a shared component", async () => {
     const urgent = makeTask({

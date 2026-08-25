@@ -76,11 +76,11 @@
 
 ## 10. Task rows and groups
 
-- [ ] 10.1 Test first in `src/ui/TaskItem.test.tsx`: a recurring row shows its duration and a text rule description as separate elements, and shows no priority name. Pins the badge substitution.
-- [ ] 10.2 Test first: a recurring task completed today renders struck through with its rule description still legible. Pins the completed-row requirement.
-- [ ] 10.3 Test first in `src/ui/TaskViews.test.tsx`: `PriorityGroups` renders a "Recurring" heading ahead of the urgent group, and omits it entirely when no recurring task is present. Pins the group and its empty case.
-- [ ] 10.4 Test first: the Today tab places a due recurring task under Recurring and never under a priority heading. Pins Today's grouping.
-- [ ] 10.5 Test first: the All tab places recurring tasks under Recurring, ahead of every priority group, ordered by place. Pins All's grouping and ordering.
+- [x] 10.1 Test first in `src/ui/TaskItem.test.tsx`: a recurring row shows its duration and a text rule description as separate elements, and shows no priority name. Pins the badge substitution.
+- [x] 10.2 Test first: a recurring task completed today renders struck through with its rule description still legible. Pins the completed-row requirement.
+- [x] 10.3 Test first in `src/ui/TaskViews.test.tsx`: `PriorityGroups` renders a "Recurring" heading ahead of the urgent group, and omits it entirely when no recurring task is present. Pins the group and its empty case.
+- [x] 10.4 Test first: the Today tab places a due recurring task under Recurring and never under a priority heading. Pins Today's grouping.
+- [x] 10.5 Test first: the All tab places recurring tasks under Recurring, ahead of every priority group, ordered by place. Pins All's grouping and ordering.
 
 ## 11. Tab membership
 

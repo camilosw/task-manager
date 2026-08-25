@@ -1,6 +1,7 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { formatDuration } from '../domain/duration'
 import type { Priority } from '../domain/priority'
+import { formatRule } from '../domain/recurrence'
 import type {
   EditTaskInput,
   EditTaskResult,
@@ -42,7 +43,8 @@ export type TaskItemProps = {
  * `duration`/`priority` branch below only guards against that being
  * impossible in practice.
  *
- * Name, duration and an identifiable priority are always visible (see
+ * Name, duration, and either an identifiable priority or — for a recurring
+ * task — a text description of its repetition rule are always visible (see
  * specs/task-views/spec.md, "Every task display shows name, duration, and
  * priority"). Completion is driven by a checkbox that persists across the
  * pending -> completed transition rather than a button that disappears:
@@ -143,13 +145,19 @@ export function TaskItem({
           <span className="task-row__duration">
             {formatDuration(task.duration)}
           </span>
-          <span className="task-row__priority" data-priority={task.priority}>
-            {/* `task.priority` is `Priority | null` (tasks.md section 3).
-                Showing a recurring task's rule here instead of a priority
-                label is section 10's job; the assertion below keeps this
-                row's current, one-off-only rendering unchanged until then. */}
-            {PRIORITY_LABELS[task.priority as Priority]}
-          </span>
+          {task.recurrence !== null ? (
+            // A recurring task shows its rule in the same slot a one-off
+            // task shows its priority, and no priority name at all — it has
+            // none (see specs/task-views/spec.md, "Every task display shows
+            // name, duration, and priority", and design.md, decision 11).
+            <span className="task-row__recurrence" data-recurring="true">
+              {formatRule(task.recurrence, 'short')}
+            </span>
+          ) : (
+            <span className="task-row__priority" data-priority={task.priority}>
+              {PRIORITY_LABELS[task.priority as Priority]}
+            </span>
+          )}
         </div>
       </div>
       <div className="task-row__actions">
