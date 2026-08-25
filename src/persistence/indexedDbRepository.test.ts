@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import type { Task } from '../domain/task'
 import type { DaySnapshot } from '../domain/snapshot'
+import type { RecurrenceRule } from '../domain/recurrence'
 import { compareForSelection } from '../domain/dailyPlan'
 import { DB_VERSION, createIndexedDbRepository } from './indexedDbRepository'
 import { runRepositoryContractTests } from './repositoryContract'
@@ -20,6 +21,11 @@ const LEGACY_SNAPSHOT_KEY = 'current'
 // so a legacy fixture omits all three.
 type LegacyTask = Omit<Task, 'place' | 'recurrence' | 'lastCompletedOn'>
 
+// Version 2 carries `place` but predates `recurrence`/`lastCompletedOn`
+// (added in version 3, tasks.md section 7), so a version-2 fixture omits
+// just those two.
+type Version2Task = Omit<Task, 'recurrence' | 'lastCompletedOn'>
+
 /**
  * Opens `dbName` at version 1 — the schema that predates `place` — and
  * writes `tasks` and, if given, `snapshot` directly into it. Simulates
@@ -35,6 +41,55 @@ function seedLegacyDatabase(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbName, 1)
+
+    request.onupgradeneeded = () => {
+      const db = request.result
+      db.createObjectStore(LEGACY_TASKS_STORE, { keyPath: 'id' })
+      db.createObjectStore(LEGACY_SNAPSHOT_STORE)
+    }
+
+    request.onsuccess = () => {
+      const db = request.result
+      const transaction = db.transaction(
+        [LEGACY_TASKS_STORE, LEGACY_SNAPSHOT_STORE],
+        'readwrite',
+      )
+      const tasksStore = transaction.objectStore(LEGACY_TASKS_STORE)
+      for (const task of tasks) {
+        tasksStore.put(task)
+      }
+      if (snapshot !== null) {
+        transaction
+          .objectStore(LEGACY_SNAPSHOT_STORE)
+          .put(snapshot, LEGACY_SNAPSHOT_KEY)
+      }
+
+      transaction.oncomplete = () => {
+        db.close()
+        resolve()
+      }
+      transaction.onerror = () => reject(transaction.error)
+    }
+
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
+ * Opens `dbName` at version 2 — the schema that predates `recurrence` and
+ * `lastCompletedOn` — and writes `tasks` and, if given, `snapshot` directly
+ * into it. Simulates exactly what a device holds before it is ever opened
+ * by version-3 code, so the version-3 `onupgradeneeded` handler has real
+ * pre-upgrade data to migrate when the repository under test next opens the
+ * same database name at `DB_VERSION`.
+ */
+function seedVersion2Database(
+  dbName: string,
+  tasks: Version2Task[],
+  snapshot: DaySnapshot | null = null,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(dbName, 2)
 
     request.onupgradeneeded = () => {
       const db = request.result
@@ -372,5 +427,121 @@ describe('version-2 upgrade (5.2-5.5)', () => {
 
     expect(data.tasks).toEqual([])
     expect(data.snapshot).toBeNull()
+  })
+})
+
+describe('version-3 upgrade (7.2-7.4)', () => {
+  it('backfills a null rule and null last completion on every stored task, leaving name, duration, priority, place, and completion state untouched (7.2)', async () => {
+    const dbName = `v3-upgrade-db-${dbCounter++}`
+    await seedVersion2Database(dbName, [
+      {
+        id: 'a',
+        name: 'A',
+        duration: 30,
+        priority: 'medium',
+        createdAt: new Date('2026-08-17T09:00:00.000Z'),
+        place: 0,
+        completedAt: null,
+      },
+      {
+        id: 'b',
+        name: 'B',
+        duration: 15,
+        priority: 'urgent',
+        createdAt: new Date('2026-08-17T10:00:00.000Z'),
+        place: 1,
+        completedAt: new Date('2026-08-17T11:00:00.000Z'),
+      },
+    ])
+
+    const repository = createIndexedDbRepository({
+      dbName,
+      version: DB_VERSION,
+    })
+    const data = await repository.loadAll()
+
+    const a = getById(data.tasks, 'a')
+    expect(a.recurrence).toBeNull()
+    expect(a.lastCompletedOn).toBeNull()
+    expect(a.name).toBe('A')
+    expect(a.duration).toBe(30)
+    expect(a.priority).toBe('medium')
+    expect(a.place).toBe(0)
+    expect(a.completedAt).toBeNull()
+
+    const b = getById(data.tasks, 'b')
+    expect(b.recurrence).toBeNull()
+    expect(b.lastCompletedOn).toBeNull()
+    expect(b.name).toBe('B')
+    expect(b.duration).toBe(15)
+    expect(b.priority).toBe('urgent')
+    expect(b.place).toBe(1)
+    expect(b.completedAt).toBeInstanceOf(Date)
+    expect(b.completedAt?.getTime()).toBe(
+      new Date('2026-08-17T11:00:00.000Z').getTime(),
+    )
+  })
+
+  it('does not run the version-3 upgrade against a database that never existed at an earlier version (7.3)', async () => {
+    const dbName = `v3-fresh-install-db-${dbCounter++}`
+    const rule: RecurrenceRule = { kind: 'weekly', weekdays: [1] }
+    const repository = createIndexedDbRepository({
+      dbName,
+      version: DB_VERSION,
+    })
+    await repository.saveTasks([
+      {
+        id: 'one',
+        name: 'One',
+        duration: 15,
+        priority: null,
+        recurrence: rule,
+        createdAt: new Date('2026-08-17T09:00:00.000Z'),
+        place: 0,
+        completedAt: null,
+        lastCompletedOn: '2026-08-10',
+      },
+    ])
+
+    // A fresh instance opening the same, already-version-3 database again —
+    // `onupgradeneeded` never fires a second time at the same version, so a
+    // wrongly-firing guard would be the only way this could revert to null.
+    const reopened = createIndexedDbRepository({ dbName, version: DB_VERSION })
+    const data = await reopened.loadAll()
+
+    expect(getById(data.tasks, 'one').recurrence).toEqual(rule)
+    expect(getById(data.tasks, 'one').lastCompletedOn).toBe('2026-08-10')
+  })
+
+  it('leaves a stored daily plan unchanged by the upgrade (7.4)', async () => {
+    const dbName = `v3-upgrade-db-${dbCounter++}`
+    const snapshot: DaySnapshot = {
+      date: '2026-08-17',
+      plannedIds: ['a'],
+      admittedIds: ['b'],
+    }
+    await seedVersion2Database(
+      dbName,
+      [
+        {
+          id: 'a',
+          name: 'A',
+          duration: 30,
+          priority: 'medium',
+          createdAt: new Date('2026-08-17T09:00:00.000Z'),
+          place: 0,
+          completedAt: null,
+        },
+      ],
+      snapshot,
+    )
+
+    const repository = createIndexedDbRepository({
+      dbName,
+      version: DB_VERSION,
+    })
+    const data = await repository.loadAll()
+
+    expect(data.snapshot).toEqual(snapshot)
   })
 })

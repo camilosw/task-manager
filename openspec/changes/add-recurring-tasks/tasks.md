@@ -49,10 +49,10 @@
 
 ## 7. Persistence
 
-- [ ] 7.1 Test first in `src/persistence/repositoryContract.ts`: a recurring task round-trips with its rule and its last completion date, through both repository implementations. Pins what persists.
-- [ ] 7.2 Test first in `src/persistence/indexedDbRepository.test.ts`: opening a version-2 database at version 3 backfills a null rule and null last completion on every stored task, leaving name, duration, priority, place, and completion state untouched. Pins the upgrade.
-- [ ] 7.3 Test first: the version-3 upgrade does not run against a database that never existed at an earlier version. Pins the fresh-install guard the version-2 upgrade already established.
-- [ ] 7.4 Test first: a stored daily plan is unchanged by the upgrade. Pins that the snapshot store is not touched.
+- [x] 7.1 Test first in `src/persistence/repositoryContract.ts`: a recurring task round-trips with its rule and its last completion date, through both repository implementations. Pins what persists.
+- [x] 7.2 Test first in `src/persistence/indexedDbRepository.test.ts`: opening a version-2 database at version 3 backfills a null rule and null last completion on every stored task, leaving name, duration, priority, place, and completion state untouched. Pins the upgrade.
+- [x] 7.3 Test first: the version-3 upgrade does not run against a database that never existed at an earlier version. Pins the fresh-install guard the version-2 upgrade already established.
+- [x] 7.4 Test first: a stored daily plan is unchanged by the upgrade. Pins that the snapshot store is not touched.
 
 ## 8. Application state
 

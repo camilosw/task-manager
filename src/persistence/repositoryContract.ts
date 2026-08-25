@@ -68,6 +68,21 @@ export function runRepositoryContractTests(
       expect(sortedById(data.tasks)).toEqual(sortedById([urgent, completed]))
     })
 
+    it("round-trips a recurring task's rule and last completion date", async () => {
+      const repository = await createRepository()
+      const recurring = makeTask({
+        id: 'recurring-task',
+        priority: null,
+        recurrence: { kind: 'monthly-weekday', nth: 1, weekday: 1 },
+        lastCompletedOn: '2026-08-03',
+      })
+
+      await repository.saveTasks([recurring])
+      const data = await repository.loadAll()
+
+      expect(data.tasks).toEqual([recurring])
+    })
+
     it("round-trips a task's place", async () => {
       const repository = await createRepository()
       const first = makeTask({ id: 'first-place', place: 3 })

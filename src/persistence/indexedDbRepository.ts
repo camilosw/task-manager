@@ -11,7 +11,7 @@ import type { Repository, RepositoryData } from './repository'
  * user's data would appear to have vanished.
  */
 export const DB_NAME = 'task-manager'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 const TASKS_STORE = 'tasks'
 const SNAPSHOT_STORE = 'snapshot'
@@ -38,18 +38,84 @@ export type IndexedDbRepositoryOptions = {
  * The snapshot store is never touched here — the upgrade only reads and
  * writes `TASKS_STORE`.
  */
-function assignPlacesByCreationOrder(transaction: IDBTransaction): void {
+function assignPlacesByCreationOrder(tasks: Task[]): Task[] {
+  return [...tasks]
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+    .map((task, index) => ({ ...task, place: index }))
+}
+
+/**
+ * The version-3 upgrade (see design.md, decision 12, and
+ * specs/offline-storage/spec.md, "Data stored before recurring tasks
+ * remains one-off work"): every task stored before this change, none of
+ * which carries `recurrence` or `lastCompletedOn`, is given
+ * `recurrence: null` and `lastCompletedOn: null` explicitly. Every other
+ * field — name, duration, priority, place, completedAt, createdAt — is
+ * carried over untouched.
+ *
+ * The backfill is written explicitly rather than relying on the fields
+ * reading as `undefined`: `undefined` and `null` are both falsy at every
+ * current use site, so tolerating the gap would work today — right up until
+ * a future upgrade or an exhaustiveness check treats the two as distinct.
+ */
+function backfillRecurrenceFields(tasks: Task[]): Task[] {
+  return tasks.map((task) => ({
+    ...task,
+    recurrence: null,
+    lastCompletedOn: null,
+  }))
+}
+
+/**
+ * Migrates every stored task forward across whichever of the version-2 and
+ * version-3 upgrades `oldVersion` has not yet been through. Both are
+ * combined into a single read-modify-write pass — one `getAll`, one batch
+ * of `put`s — rather than two independent passes, each with its own
+ * `getAll`. That matters for a database that jumps directly from version 1
+ * to version 3 in one `onupgradeneeded` event, which is a real path for an
+ * offline PWA: a device that does not reopen the app between two
+ * deployments never runs the intermediate version's code at all. Two
+ * independent read-modify-write passes over the same store within one
+ * transaction would each read a stale snapshot of the data and their
+ * `put`s could race, silently discarding one pass's fields with the
+ * other's. A single pass has no such hazard.
+ *
+ * Only a database that already existed at an earlier version can hold
+ * tasks written before `place`, `recurrence`, or `lastCompletedOn` existed.
+ * A brand-new database — `oldVersion` `0` — has just had its stores created
+ * and is empty, so the migration would be a no-op anyway; skipping it for
+ * that case keeps a fresh install from ever being said to have run an
+ * upgrade at all (see specs/offline-storage/spec.md, "A fresh install runs
+ * no upgrade").
+ *
+ * Runs inside the versionchange transaction `onupgradeneeded` already holds
+ * open, so it commits atomically with the object-store creation above it.
+ * The snapshot store is never touched here — the upgrade only reads and
+ * writes `TASKS_STORE`.
+ */
+function migrateTasks(transaction: IDBTransaction, oldVersion: number): void {
+  const needsPlaces = oldVersion === 1
+  const needsRecurrenceFields = oldVersion > 0 && oldVersion < 3
+
+  if (!needsPlaces && !needsRecurrenceFields) {
+    return
+  }
+
   const store = transaction.objectStore(TASKS_STORE)
   const getAllRequest = store.getAll() as IDBRequest<Task[]>
 
   getAllRequest.onsuccess = () => {
-    const tasks = [...getAllRequest.result].sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    )
-    tasks.forEach((task, index) => {
-      store.put({ ...task, place: index })
-    })
+    let tasks = getAllRequest.result
+    if (needsPlaces) {
+      tasks = assignPlacesByCreationOrder(tasks)
+    }
+    if (needsRecurrenceFields) {
+      tasks = backfillRecurrenceFields(tasks)
+    }
+    tasks.forEach((task) => store.put(task))
   }
 }
 
@@ -66,16 +132,7 @@ function openDatabase(dbName: string, version: number): Promise<IDBDatabase> {
         db.createObjectStore(SNAPSHOT_STORE)
       }
 
-      // Only a database that already existed at version 1 can hold tasks
-      // written before `place` existed. A brand-new database — `oldVersion`
-      // 0 — has just had its stores created above and is empty, so the
-      // migration would be a no-op anyway; skipping it for that case keeps
-      // a fresh install from ever being said to have run an upgrade at all
-      // (see specs/offline-storage/spec.md, "First launch with no stored
-      // data needs no upgrade").
-      if (event.oldVersion === 1) {
-        assignPlacesByCreationOrder(request.transaction as IDBTransaction)
-      }
+      migrateTasks(request.transaction as IDBTransaction, event.oldVersion)
     }
 
     request.onsuccess = () => resolve(request.result)
