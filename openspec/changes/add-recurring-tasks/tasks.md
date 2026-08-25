@@ -35,11 +35,11 @@
 
 ## 5. Daily plan selection
 
-- [ ] 5.1 Test first in `src/domain/dailyPlan.test.ts`: `compareForSelection` orders due recurring tasks ahead of every priority level, and orders two recurring tasks by place. Pins the walk order.
-- [ ] 5.2 Test first: the spec's reservation table — R1 30m due, H1 45m, M1 20m, L1 10m — yields R1 and H1 with a planned total of 75. Pins that a due recurring task reserves budget from the front.
-- [ ] 5.3 Test first: the same three one-off tasks with R1 at rest yield H1 and M1, total 65, with R1 contributing nothing. Pins the contrast that makes reservation observable.
-- [ ] 5.4 Test first: R1 45m and R2 30m, both due, exclude a 5-minute high task. Pins recurring work alone crowding out the day.
-- [ ] 5.5 Test first: a due recurring task and an urgent task are both included whatever order they are considered in, and the first conditional task sees the same running total either way. Pins the ordering-does-not-affect-membership claim in design.md, decision 6.
+- [x] 5.1 Test first in `src/domain/dailyPlan.test.ts`: `compareForSelection` orders due recurring tasks ahead of every priority level, and orders two recurring tasks by place. Pins the walk order.
+- [x] 5.2 Test first: the spec's reservation table — R1 30m due, H1 45m, M1 20m, L1 10m — yields R1 and H1 with a planned total of 75. Pins that a due recurring task reserves budget from the front.
+- [x] 5.3 Test first: the same three one-off tasks with R1 at rest yield H1 and M1, total 65, with R1 contributing nothing. Pins the contrast that makes reservation observable.
+- [x] 5.4 Test first: R1 45m and R2 30m, both due, exclude a 5-minute high task. Pins recurring work alone crowding out the day.
+- [x] 5.5 Test first: a due recurring task and an urgent task are both included whatever order they are considered in, and the first conditional task sees the same running total either way. Pins the ordering-does-not-affect-membership claim in design.md, decision 6.
 
 ## 6. Snapshot admission
 

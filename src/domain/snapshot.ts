@@ -138,7 +138,7 @@ export function pruneTaskId(
  * *after* this computation, not tasks that were already urgent when it ran.
  */
 export function recomputeSnapshot(tasks: Task[], now: Date): DaySnapshot {
-  const planned = selectDailyPlan(tasks)
+  const planned = selectDailyPlan(tasks, now)
   return {
     date: toLocalDateString(now),
     plannedIds: planned.map((task) => task.id),
