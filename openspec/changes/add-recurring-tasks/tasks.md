@@ -9,14 +9,14 @@
 
 ## 2. Due-ness in the domain
 
-- [ ] 2.1 Test first in `src/domain/recurrence.test.ts`: `lastDueDate` returns the most recent occurrence at or before a given date, never earlier than the creation date, and null when none exists. Pins the creation floor.
-- [ ] 2.2 Test first: `isDue` traced across the spec's cycle — due on 10 Aug, not due once completed that day, not due 11 and 16 Aug, due again 17 Aug. Pins the completion-clears-occurrence comparison.
-- [ ] 2.3 Test first: a task created Saturday 22 August 2026 with a weekly-Monday rule is not due 22 or 23 August and is due 24 August. Pins that an occurrence predating creation does not count.
-- [ ] 2.4 Test first: a task created on one of its own occurrence dates is due that same day. Pins the boundary of the creation floor.
-- [ ] 2.5 Test first: an occurrence missed on 24 August leaves the task due on 25 and 26 August. Pins that a missed occurrence is not lost.
-- [ ] 2.6 Test first: completing on 25 August leaves the task not due on 26 August and due again on 31 August. Pins the late-completion case.
-- [ ] 2.7 Test first: three consecutive missed Mondays yield one due task, with no count or backlog exposed. Pins non-accumulation.
-- [ ] 2.8 Test first: `lastDueDate` terminates and returns null for a rule that cannot fire within its search window. Pins the bounded backward walk called out in design.md, Risks.
+- [x] 2.1 Test first in `src/domain/recurrence.test.ts`: `lastDueDate` returns the most recent occurrence at or before a given date, never earlier than the creation date, and null when none exists. Pins the creation floor.
+- [x] 2.2 Test first: `isDue` traced across the spec's cycle — due on 10 Aug, not due once completed that day, not due 11 and 16 Aug, due again 17 Aug. Pins the completion-clears-occurrence comparison.
+- [x] 2.3 Test first: a task created Saturday 22 August 2026 with a weekly-Monday rule is not due 22 or 23 August and is due 24 August. Pins that an occurrence predating creation does not count.
+- [x] 2.4 Test first: a task created on one of its own occurrence dates is due that same day. Pins the boundary of the creation floor.
+- [x] 2.5 Test first: an occurrence missed on 24 August leaves the task due on 25 and 26 August. Pins that a missed occurrence is not lost.
+- [x] 2.6 Test first: completing on 25 August leaves the task not due on 26 August and due again on 31 August. Pins the late-completion case.
+- [x] 2.7 Test first: three consecutive missed Mondays yield one due task, with no count or backlog exposed. Pins non-accumulation.
+- [x] 2.8 Test first: `lastDueDate` terminates and returns null for a rule that cannot fire within its search window. Pins the bounded backward walk called out in design.md, Risks.
 
 ## 3. The task record
 

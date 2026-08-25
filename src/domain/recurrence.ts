@@ -181,6 +181,118 @@ function joinNames(names: string[]): string {
 }
 
 /**
+ * Parses a local calendar date string (`YYYY-MM-DD`, as produced by
+ * `toLocalDateString`) into a `Date` at local midnight. Splits and
+ * reconstructs via `Date`'s local constructor rather than
+ * `new Date(dateString)`, which parses a bare `YYYY-MM-DD` string as UTC
+ * midnight and can shift the calendar date near a time-zone boundary — the
+ * same reason `toLocalDateString` (see `./dayBoundary`) avoids
+ * `toISOString`.
+ */
+function parseLocalDate(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+/**
+ * Formats `date` as `YYYY-MM-DD` in local time. Duplicates
+ * `./dayBoundary`'s `toLocalDateString` rather than importing it, keeping
+ * the domain's recurrence math free of a cross-file dependency for a
+ * three-line date format; both are kept in sync by
+ * `src/domain/dayBoundary.test.ts` and the scenarios below.
+ */
+function formatLocalDate(date: Date): string {
+  const year = String(date.getFullYear()).padStart(4, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * How many days `lastDueDate` walks backward from `today` before giving up.
+ * Every valid `RecurrenceRule` produces an occurrence at least this often —
+ * at most a week for `weekly`, at most about five weeks for
+ * `monthly-weekday` (the "fourth"/"last" positions, which can land up to
+ * roughly five weeks apart across a month boundary) — so this window never
+ * clips a real occurrence. It exists to keep the walk bounded even when the
+ * task's creation date is far in the past, or when a rule that cannot fire
+ * at all (an incomplete `weekly` draft with no weekdays, reachable only by
+ * bypassing `isCompleteRule`) is passed in: the walk must stop and answer
+ * "no occurrence" rather than loop until it reaches the creation date or
+ * hang the render (see design.md, Risks — "the walk must be bounded
+ * explicitly rather than looping until it finds a match").
+ */
+const SEARCH_WINDOW_DAYS = 60
+
+/**
+ * The most recent date on or before `today`, and on or after `createdOn`,
+ * on which `rule` produces an occurrence — or `null` when no such date
+ * exists. Dates are local calendar-date strings (`YYYY-MM-DD`), matching
+ * `toLocalDateString`'s format, so the whole feature shares the daily
+ * plan's local-time-zone day boundary with no second notion of "what day it
+ * is" (see design.md, decision 2).
+ *
+ * The `createdOn` floor is load-bearing: occurrences are counted only from
+ * the task's creation date onward, because the task did not exist before
+ * then (see specs/recurring-tasks/spec.md, "When a recurring task is due").
+ * The walk additionally never looks back further than
+ * `SEARCH_WINDOW_DAYS`, whichever of the two floors is later — see that
+ * constant's comment for why the bound is safe for every valid rule.
+ */
+export function lastDueDate(
+  rule: RecurrenceRule,
+  createdOn: string,
+  today: string,
+): string | null {
+  const createdOnDate = parseLocalDate(createdOn)
+  const cursor = parseLocalDate(today)
+
+  const windowFloor = parseLocalDate(today)
+  windowFloor.setDate(windowFloor.getDate() - SEARCH_WINDOW_DAYS)
+
+  const floor = createdOnDate > windowFloor ? createdOnDate : windowFloor
+
+  while (cursor >= floor) {
+    if (occursOn(rule, cursor)) {
+      return formatLocalDate(cursor)
+    }
+    cursor.setDate(cursor.getDate() - 1)
+  }
+
+  return null
+}
+
+/**
+ * Whether a recurring task is due: `rule` has produced an occurrence on or
+ * before `today`, at or after `createdOn`, that `lastCompletedOn` has not
+ * cleared. A completion clears an occurrence when it was recorded on or
+ * after that occurrence's date; a completion recorded before the occurrence
+ * date does not clear it (see specs/recurring-tasks/spec.md, "When a
+ * recurring task is due").
+ *
+ * Takes the task's constituent fields rather than a `Task`, because `Task`
+ * does not yet carry `recurrence` or `lastCompletedOn` — that widening is
+ * tasks.md section 3's work, out of scope here. Mirrors design.md decision
+ * 2's formula, `isDue(task, now)`, which composes this the same way once
+ * `Task` carries those fields: `lastDueDate` first, then compared against
+ * the last completion.
+ *
+ * Answers a plain boolean, with no count of how many occurrences were
+ * missed: three missed Mondays and one missed Monday compare identically
+ * here, which is what keeps missed occurrences from accumulating (see
+ * specs/recurring-tasks/spec.md, "Missed occurrences never accumulate").
+ */
+export function isDue(
+  rule: RecurrenceRule,
+  createdOn: string,
+  lastCompletedOn: string | null,
+  today: string,
+): boolean {
+  const due = lastDueDate(rule, createdOn, today)
+  return due !== null && (lastCompletedOn === null || lastCompletedOn < due)
+}
+
+/**
  * Renders a plain-language description of `rule`: the `'long'` form is a
  * full sentence fragment for the confirmation echo below the rule builder
  * ("Repeats every Monday and Wednesday", "Repeats the first Monday of every
