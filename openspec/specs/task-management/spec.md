@@ -8,7 +8,9 @@ Defines the task entity and everything a user can do to a single task: what a ta
 
 ### Requirement: Task attributes
 
-A task SHALL consist of a name, a duration, a priority level, a creation timestamp, a place in the order the user has arranged, and a completion state. The creation timestamp SHALL be recorded when the task is created and SHALL NOT change thereafter. The place in the order SHALL be assigned when the task is created and SHALL change only when the user reorders tasks.
+A task SHALL consist of a name, a duration, either a priority level or a repetition rule, a creation timestamp, a place in the order the user has arranged, and a completion state. A task SHALL carry exactly one of a priority level or a repetition rule, never both and never neither; the recurring-tasks capability defines what a repetition rule is. A task carrying a repetition rule SHALL additionally record the date it was last completed, which SHALL be absent until it has been completed at least once.
+
+The creation timestamp SHALL be recorded when the task is created and SHALL NOT change thereafter. The place in the order SHALL be assigned when the task is created and SHALL change only when the user reorders tasks.
 
 Every task SHALL hold a distinct place, so the order of any two tasks is always defined. The creation timestamp SHALL NOT determine where a task is displayed or in what order it is considered for the daily plan; that is the place's role alone.
 
@@ -16,19 +18,30 @@ Every task SHALL hold a distinct place, so the order of any two tasks is always 
 
 - **WHEN** a task is created with name "Review the PR", duration 30 minutes, and priority high
 - **THEN** the task has that name, duration, and priority
+- **AND** the task carries no repetition rule
 - **AND** the task is in the pending state
 - **AND** the task records the moment it was created
 - **AND** the task holds a place in the order, distinct from every other task's
 
+#### Scenario: A created recurring task carries all attributes
+
+- **WHEN** a task is created with name "Weekly review", duration 30 minutes, and a rule of every Monday
+- **THEN** the task has that name, duration, and repetition rule
+- **AND** the task carries no priority level
+- **AND** the task records the moment it was created
+- **AND** the task holds a place in the order, distinct from every other task's
+- **AND** the task records no date of last completion until it is first completed
+
 #### Scenario: Editing does not alter the creation timestamp
 
-- **WHEN** an existing task's name, duration, or priority is edited
+- **WHEN** an existing task's name, duration, priority, or repetition rule is edited
 - **THEN** the task's creation timestamp remains the value it had before the edit
 - **AND** the task's place in the order remains the one it had before the edit
+- **AND** the date a recurring task was last completed remains the value it had before the edit
 
 ### Requirement: A new task takes the last place in the order
 
-A newly created task SHALL take a place after every existing task, so it appears last among the tasks of its own priority level. This SHALL hold regardless of how the existing tasks have been arranged.
+A newly created task SHALL take a place after every existing task, so it appears last among the tasks it is grouped with — the tasks of its own priority level for a one-off task, or the recurring tasks for a recurring one. This SHALL hold regardless of how the existing tasks have been arranged.
 
 #### Scenario: A new task appears last among its peers
 
@@ -50,6 +63,13 @@ Given three existing medium tasks, arranged by the user in the order shown:
 - **WHEN** the user creates a task whose priority level already contains tasks
 - **THEN** the new task appears last among the tasks of that level
 - **AND** the order of every other level is unchanged
+
+#### Scenario: A new recurring task appears last among the recurring tasks
+
+- **WHEN** the user creates a recurring task while other recurring tasks already exist
+- **THEN** the new task takes a place after every existing task
+- **AND** it appears last among the recurring tasks
+- **AND** the order of every priority level is unchanged
 
 ### Requirement: Reordering a task within its priority level
 
@@ -137,23 +157,38 @@ Task duration SHALL be selected from exactly nine options: 5, 10, 15, 20, 30, 45
 
 ### Requirement: Five priority levels with a defined order
 
-A task SHALL carry exactly one of five priority levels. The levels, from most to least important, SHALL be: urgent, high, medium, low, very low. This ordering SHALL be used wherever tasks are sorted or selected by priority.
+A task that is not recurring SHALL carry exactly one of five priority levels. The levels, from most to least important, SHALL be: urgent, high, medium, low, very low. This ordering SHALL be used wherever one-off tasks are sorted or selected by priority.
+
+A recurring task SHALL NOT carry a priority level and SHALL NOT be placed on this ordering. It SHALL NOT be treated as more important than urgent, as less important than very low, or as equal to any level; it is grouped and ordered ahead of the priority ordering entirely, as the task-views and daily-plan capabilities define.
 
 #### Scenario: Priority ordering is total and fixed
 
-- **WHEN** tasks of every priority level are ordered by importance
+- **WHEN** one-off tasks of every priority level are ordered by importance
 - **THEN** the resulting order is urgent, then high, then medium, then low, then very low
 - **AND** no two levels are treated as equally important
 
+#### Scenario: A recurring task is not placed on the priority ordering
+
+- **WHEN** a recurring task and one-off tasks of every priority level are listed together
+- **THEN** the recurring task is not compared against any priority level by importance
+- **AND** it is presented in a group of its own rather than within any priority group
+
 ### Requirement: Creating a task
 
-Creating a task SHALL require a non-empty name, a selected duration, and a selected priority. The system SHALL reject a creation attempt that is missing any of the three.
+Creating a task SHALL require a non-empty name, a selected duration, and either a selected priority or a complete repetition rule. The system SHALL reject a creation attempt that is missing the name, the duration, or the priority-or-rule choice, and SHALL report every missing part rather than only the first.
 
 #### Scenario: Creating a complete task
 
 - **WHEN** the user submits a task with a non-empty name, a selected duration, and a selected priority
 - **THEN** the task is created in the pending state
 - **AND** the task becomes visible in the All tab
+
+#### Scenario: Creating a complete recurring task
+
+- **WHEN** the user submits a task with a non-empty name, a selected duration, and a complete repetition rule
+- **THEN** the task is created as a recurring task
+- **AND** the task becomes visible in the All tab
+- **AND** it carries no priority level
 
 #### Scenario: Name is missing or blank
 
@@ -163,13 +198,20 @@ Creating a task SHALL require a non-empty name, a selected duration, and a selec
 
 #### Scenario: Duration or priority not selected
 
-- **WHEN** the user attempts to create a task without selecting a duration, or without selecting a priority
+- **WHEN** the user attempts to create a one-off task without selecting a duration, or without selecting a priority
 - **THEN** the task is not created
 - **AND** the user is shown which selection is missing
 
+#### Scenario: Repetition rule incomplete
+
+- **WHEN** the user attempts to create a recurring task without completing its repetition rule
+- **THEN** the task is not created
+- **AND** the user is shown that the rule is incomplete
+- **AND** no priority is required of them, because the task is recurring
+
 ### Requirement: Editing a task
 
-The user SHALL be able to change an existing task's name, duration, and priority. An edit SHALL take effect immediately everywhere the task is displayed.
+The user SHALL be able to change an existing task's name, duration, and either its priority or its repetition rule. The user SHALL also be able to convert a task between one-off and recurring. An edit SHALL take effect immediately everywhere the task is displayed.
 
 #### Scenario: Editing a task's duration
 
@@ -182,10 +224,22 @@ The user SHALL be able to change an existing task's name, duration, and priority
 - **AND** that task is displayed in a view that groups tasks by priority
 - **THEN** the task appears under the low group and no longer under the medium group
 
+#### Scenario: Editing a recurring task's rule
+
+- **WHEN** the user changes a recurring task's repetition rule
+- **THEN** every view that displays the task shows the new rule
+- **AND** which dates the task is due on changes as the recurring-tasks capability defines
+
 #### Scenario: An edit cannot produce an invalid task
 
 - **WHEN** the user attempts to save an edit that clears the name
 - **THEN** the edit is rejected and the task keeps its previous value
+
+#### Scenario: An edit cannot leave a task with neither a priority nor a rule
+
+- **WHEN** the user attempts to save an edit that would leave a task without a priority and without a complete repetition rule
+- **THEN** the edit is rejected and the task keeps its previous values
+- **AND** the user is shown what is missing
 
 ### Requirement: Deleting a task
 
@@ -204,18 +258,31 @@ The user SHALL be able to delete a task. A deleted task SHALL disappear from eve
 
 ### Requirement: Completing a task
 
-The user SHALL be able to mark a pending task as completed. Completion SHALL record when it happened, and a completed task SHALL appear in the Completed tab. Completion SHALL be the same state change regardless of which tab it was performed from; only the resulting display differs, as defined by the task-views capability.
+The user SHALL be able to mark a pending task as completed. Completion SHALL record when it happened. Completion SHALL be the same state change regardless of which tab it was performed from; only the resulting display differs, as defined by the task-views capability.
+
+For a one-off task, completion SHALL be final: the task SHALL appear in the Completed tab and SHALL never again be eligible for a daily plan.
+
+For a recurring task, completion SHALL NOT be final. It SHALL additionally record the date of the completion and put the task at rest until its rule produces a later occurrence, as the recurring-tasks capability defines. A completed recurring task SHALL NOT appear in the Completed tab.
 
 #### Scenario: Completing a pending task
 
-- **WHEN** the user marks a pending task as completed
+- **WHEN** the user marks a pending one-off task as completed
 - **THEN** the task is recorded as completed with the time of completion
 - **AND** the task appears in the Completed tab
+
+#### Scenario: Completing a recurring task
+
+- **WHEN** the user marks a due recurring task as completed
+- **THEN** the task is recorded as completed with the time of completion
+- **AND** the date of the completion is recorded
+- **AND** the task does not appear in the Completed tab
+- **AND** the task becomes due again at its next occurrence
 
 #### Scenario: A completed task is no longer eligible for a daily plan
 
 - **WHEN** a daily plan is computed
-- **THEN** tasks already marked completed are not considered for selection
+- **THEN** one-off tasks already marked completed are not considered for selection
+- **AND** recurring tasks that are at rest are not considered either
 
 ### Requirement: Task creation is opened on demand from a persistent control
 
@@ -242,7 +309,9 @@ The form SHALL close when the user cancels it, when the user dismisses it, and w
 - **WHEN** the user opens the creation form
 - **THEN** the name is empty
 - **AND** no duration is selected
+- **AND** the task type is set to one-off
 - **AND** no priority is selected
+- **AND** no repetition rule is built
 
 #### Scenario: Cancelling closes the form and discards the draft
 
@@ -271,6 +340,13 @@ The form SHALL close when the user cancels it, when the user dismisses it, and w
 - **THEN** the form stays open
 - **AND** the message stating that a name is required is displayed inside it
 - **AND** the selected duration and priority are still selected
+
+#### Scenario: A rejected recurring creation keeps the rule that was built
+
+- **WHEN** the user submits the form with a blank name, a duration selected, and a complete repetition rule built
+- **THEN** the form stays open
+- **AND** the task type is still set to recurring
+- **AND** the repetition rule the user built is still in place
 
 #### Scenario: The form does not hide the tab permanently
 
@@ -337,5 +413,94 @@ Each task row SHALL offer a control to edit the task and a control to delete it.
 #### Scenario: Editing opens the form in place of the row
 
 - **WHEN** the user activates the edit control on a task row
-- **THEN** the row is replaced by a form pre-filled with the task's current name, duration, and priority
+- **THEN** the row is replaced by a form pre-filled with the task's current name, duration, and either its priority or its repetition rule
+- **AND** the form shows the task type the task currently has
 - **AND** cancelling the edit restores the row unchanged
+
+#### Scenario: Deleting a recurring task ends it for good
+
+- **WHEN** the user deletes a recurring task
+- **THEN** the task is gone from every tab
+- **AND** it does not return at its next occurrence
+
+### Requirement: The creation and edit form offers a task type and a rule builder
+
+The form used to create a task and to edit one SHALL offer an explicit choice of task type — one-off or recurring — and SHALL default to one-off when creating. Choosing one-off SHALL present the priority choices; choosing recurring SHALL present a repetition rule builder in their place. The two SHALL NOT be presented at the same time, so the exclusion between a priority and a rule is visible in the form rather than only enforced on submission.
+
+The rule builder SHALL let the user choose between the two rule kinds the recurring-tasks capability defines, and then supply that kind's details: one or more days of the week for a weekly rule, or a position and a single day of the week for a monthly rule.
+
+The form SHALL display the rule being built as a plain-language sentence, so the user can confirm the rule means what they intended before saving.
+
+Switching the task type SHALL NOT discard the name or the duration already entered.
+
+#### Scenario: The type choice is offered and defaults to one-off
+
+- **WHEN** the user opens the creation form
+- **THEN** a choice between a one-off task and a recurring task is presented
+- **AND** one-off is the selected type
+- **AND** the priority choices are presented
+- **AND** no repetition rule builder is presented
+
+#### Scenario: Choosing recurring replaces priority with the rule builder
+
+- **WHEN** the user selects the recurring task type
+- **THEN** the priority choices are no longer presented
+- **AND** a repetition rule builder is presented in their place
+
+#### Scenario: Building a weekly rule on several days
+
+- **WHEN** the user chooses a weekly rule and selects Monday and Wednesday
+- **THEN** both days are shown as selected
+- **AND** the plain-language sentence describes a rule repeating every Monday and Wednesday
+
+#### Scenario: Building a monthly rule
+
+- **WHEN** the user chooses a monthly rule, selects the position "first", and selects Monday
+- **THEN** the plain-language sentence describes a rule repeating on the first Monday of every month
+
+#### Scenario: Switching type keeps the name and duration
+
+- **WHEN** the user enters a name, selects a duration, and then switches the task type
+- **THEN** the name and the duration are still in place
+- **AND** only the priority-or-rule part of the form has changed
+
+#### Scenario: The rule builder is operable from the keyboard
+
+- **WHEN** the user reaches the task type choice and the rule builder from the keyboard
+- **THEN** each choice can be reached and activated without a pointer
+- **AND** the plain-language sentence is available to assistive technology
+
+### Requirement: Converting a task between one-off and recurring
+
+Editing a task SHALL be able to convert it from one-off to recurring and back. Converting SHALL replace the task's priority with its repetition rule, or its repetition rule with a priority, so the task always carries exactly one of the two.
+
+Converting SHALL NOT change the task's name, duration, creation timestamp, or place in the order. Converting a recurring task to a one-off task SHALL NOT clear the date it was last completed, so converting it back does not make it due for an occurrence it had already completed.
+
+A conversion's effect on the day's plan is defined by the daily-plan capability.
+
+#### Scenario: Converting a one-off task to recurring
+
+- **WHEN** the user edits a high-priority task and changes its type to recurring with a rule of every Monday
+- **THEN** the task carries the rule and no priority
+- **AND** its name, duration, creation timestamp, and place are unchanged
+- **AND** it is presented in the Recurring group rather than the high group
+
+#### Scenario: Converting a recurring task to a one-off task
+
+- **WHEN** the user edits a recurring task and changes its type to one-off with priority medium
+- **THEN** the task carries priority medium and no repetition rule
+- **AND** it is presented in the medium group
+- **AND** it is no longer due or at rest, because those states apply only to recurring tasks
+
+#### Scenario: Converting back does not re-open a completed occurrence
+
+A task with a rule of every Monday, last completed on Monday 24 August 2026, converted to a one-off task on Tuesday 25 August and converted back to the same rule on Wednesday 26 August.
+
+| Current date | Most recent occurrence | Last completed | Due? |
+| ------------ | ---------------------- | -------------- | ---- |
+| Wed 26 Aug | 24 Aug | 24 Aug | no — 24 Aug is on or after 24 Aug |
+| Mon 31 Aug | 31 Aug | 24 Aug | **yes** |
+
+- **WHEN** the task is converted back to recurring on Wednesday 26 August
+- **THEN** it is not due that day
+- **AND** it becomes due again on Monday 31 August
