@@ -25,10 +25,11 @@ const FIELD_MESSAGES: Record<TaskValidationField, string> = {
  * submits. */
 type TaskType = 'one-off' | 'recurring'
 
-/** Every day of the week, in `Weekday`'s `Date#getDay` numbering
- * (`0` = Sunday), so the weekday buttons below are generated from one list
- * rather than seven repeated literals. */
-const WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
+/** Every day of the week, Monday first, so the weekday buttons below are
+ * generated from one list rather than seven repeated literals. Values are
+ * `Weekday`'s `Date#getDay` numbering (`0` = Sunday), just not in that
+ * numbering's order. */
+const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 0]
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
   0: 'Sunday',
@@ -388,9 +389,6 @@ export function TaskForm({
       )}
 
       <div className="task-form__actions">
-        <button type="submit" className="task-form__submit">
-          {submitLabel}
-        </button>
         {onCancel && (
           <button
             type="button"
@@ -400,6 +398,9 @@ export function TaskForm({
             Cancel
           </button>
         )}
+        <button type="submit" className="task-form__submit">
+          {submitLabel}
+        </button>
       </div>
     </form>
   )

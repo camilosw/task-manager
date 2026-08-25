@@ -37,11 +37,14 @@ export type TaskItemProps = {
 /**
  * A single task row: read-only by default, switching to an inline
  * `TaskForm` while editing (see specs/task-management/spec.md, "Editing a
- * task"). Duration and priority are always pre-filled from the existing
- * task and can only be reassigned to another fixed option, never cleared,
- * so the only edit-time validation failure possible is a blank name — the
- * `duration`/`priority` branch below only guards against that being
- * impossible in practice.
+ * task"). Duration, and either priority or a repetition rule, are always
+ * pre-filled from the existing task and can only be reassigned to another
+ * fixed option, never cleared — the `duration` check in `handleEditSubmit`
+ * below only guards against `values.duration` being `undefined` in
+ * `TaskFormValues`'s type, which is impossible in practice here; the
+ * priority/recurrence mutual exclusion, and a blank name, are left for
+ * `editTask` (via `onEdit`) to validate, same as `TaskForm` leaves it there
+ * on creation (see design.md, decision 1).
  *
  * Name, duration, and either an identifiable priority or — for a recurring
  * task — a text description of its repetition rule are always visible (see
@@ -73,17 +76,18 @@ export function TaskItem({
   const nameId = useId()
 
   async function handleEditSubmit(values: TaskFormValues) {
-    if (values.duration === undefined || values.priority === undefined) {
-      const errors: TaskValidationField[] = []
-      if (values.duration === undefined) errors.push('duration')
-      if (values.priority === undefined) errors.push('priority')
-      return { ok: false as const, errors }
+    if (values.duration === undefined) {
+      return {
+        ok: false as const,
+        errors: ['duration'] as TaskValidationField[],
+      }
     }
 
     const result = await onEdit(task.id, {
       name: values.name,
       duration: values.duration,
       priority: values.priority,
+      recurrence: values.recurrence,
     })
     if (result.ok) {
       setIsEditing(false)
@@ -105,12 +109,12 @@ export function TaskItem({
           initialValues={{
             name: task.name,
             duration: task.duration,
-            // `task.priority` is `Priority | null` (tasks.md section 3), but
-            // recurring tasks have no rule builder to pre-fill yet — that is
-            // section 9's job. `?? undefined` is a type-only coercion with
-            // no behavioral effect today, since every task reaching this
-            // form is still one-off.
+            // `task.priority`/`task.recurrence` are `Priority | null` /
+            // `RecurrenceRule | null` (tasks.md section 3): exactly one is
+            // set, mirroring `TaskFormValues`'s own mutual exclusion, so
+            // `?? undefined` on both is a type-only coercion.
             priority: task.priority ?? undefined,
+            recurrence: task.recurrence ?? undefined,
           }}
           onSubmit={handleEditSubmit}
           onCancel={() => setIsEditing(false)}

@@ -214,4 +214,41 @@ describe('edit and delete controls on a task row (6.4)', () => {
     expect(screen.getByText('Water the plants')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy()
   })
+
+  it('pre-fills the edit form as Recurring with the existing rule for a recurring task, and saves it back unchanged', async () => {
+    const task = makeTask({
+      id: 't1',
+      name: 'Weekly review',
+      duration: 30,
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1, 3] },
+    })
+    const { onEdit } = renderItem(task)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(
+      screen.getByRole('button', { name: 'Recurring', pressed: true }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'One-off', pressed: false }),
+    ).toBeTruthy()
+    const days = within(screen.getByRole('group', { name: 'Days of the week' }))
+    expect(
+      days.getByRole('button', { name: 'Monday', pressed: true }),
+    ).toBeTruthy()
+    expect(
+      days.getByRole('button', { name: 'Wednesday', pressed: true }),
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await Promise.resolve()
+
+    expect(onEdit).toHaveBeenCalledWith('t1', {
+      name: 'Weekly review',
+      duration: 30,
+      priority: undefined,
+      recurrence: { kind: 'weekly', weekdays: [1, 3] },
+    })
+  })
 })
