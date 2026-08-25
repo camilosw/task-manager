@@ -98,8 +98,8 @@
 
 ## 13. Appearance
 
-- [ ] 13.1 Test first in `src/ui/TaskViews.test.tsx` or a token test: the recurring indicator, the recurring choice in the form, and the "Recurring" heading resolve to one shared color token, distinct from the five priority tokens. Pins consistent assignment.
-- [ ] 13.2 Add the recurring color token to `src/styles/tokens.css` for both themes, and verify contrast by hand in light and dark. Contrast is not machine-checked in this suite, so record the result.
+- [x] 13.1 Test first in `src/ui/TaskViews.test.tsx` or a token test: the recurring indicator, the recurring choice in the form, and the "Recurring" heading resolve to one shared color token, distinct from the five priority tokens. Pins consistent assignment.
+- [x] 13.2 Add the recurring color token to `src/styles/tokens.css` for both themes, and verify contrast by hand in light and dark. Contrast is not machine-checked in this suite, so record the result.
 
 ## 14. Verification
 

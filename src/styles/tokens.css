@@ -67,6 +67,24 @@
   --priority-very-low-marker: oklch(0.55 0.015 260);
   --priority-very-low-bg: oklch(0.94 0.006 260);
   --priority-very-low-fg: oklch(0.38 0.015 260);
+
+  /*
+   * Recurring palette - light (tasks.md section 13; specs/appearance/spec.md,
+   * "Recurring tasks have their own color in both themes"): one color, in
+   * the same `-marker`/`-bg`/`-fg` shape as a priority level above, shared by
+   * the recurrence badge on a task row, the recurring choice in the form
+   * once selected, and the "Recurring" group heading - never a fourth
+   * variant per surface. hue 320 (violet/magenta) sits at least 40 degrees
+   * from every priority hue (22/55/95/178/260) and from `--accent` (258), so
+   * it reads as its own color rather than a shade of an existing one; chroma
+   * 0.14 matches the mid-range of the priority set. Same formula as above:
+   *   marker: oklch(0.55 chroma hue)              [light]
+   *   bg:     oklch(0.94 chroma * 0.4 hue)         [light]
+   *   fg:     oklch(0.38 chroma * 1 hue)           [light]
+   */
+  --recurring-marker: oklch(0.55 0.14 320);
+  --recurring-bg: oklch(0.94 0.056 320);
+  --recurring-fg: oklch(0.38 0.14 320);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,6 +124,13 @@
     --priority-very-low-marker: oklch(0.72 0.015 260);
     --priority-very-low-bg: oklch(0.28 0.0083 260);
     --priority-very-low-fg: oklch(0.86 0.0105 260);
+
+    /* dark: marker: oklch(0.72 chroma hue)
+             bg:     oklch(0.28 chroma * 0.55 hue)
+             fg:     oklch(0.86 chroma * 0.7 hue) */
+    --recurring-marker: oklch(0.72 0.14 320);
+    --recurring-bg: oklch(0.28 0.077 320);
+    --recurring-fg: oklch(0.86 0.098 320);
   }
 }
 
@@ -142,4 +167,8 @@
   --priority-very-low-marker: oklch(0.72 0.015 260);
   --priority-very-low-bg: oklch(0.28 0.0083 260);
   --priority-very-low-fg: oklch(0.86 0.0105 260);
+
+  --recurring-marker: oklch(0.72 0.14 320);
+  --recurring-bg: oklch(0.28 0.077 320);
+  --recurring-fg: oklch(0.86 0.098 320);
 }

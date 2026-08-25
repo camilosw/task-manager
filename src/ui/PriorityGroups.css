@@ -46,13 +46,12 @@
   background: var(--priority-very-low-marker);
 }
 
-/* The Recurring group's marker. Reuses the neutral muted-text token rather
-   than a dedicated color — the Recurring group's own color token, shared
-   with the row badge and the form's recurring choice, is tasks.md section
-   13's job (see specs/appearance/spec.md, "Recurring tasks have their own
-   color in both themes"). */
+/* The Recurring group's marker, in the shared recurring color token — the
+   same one used by the row's rule badge and the form's recurring choice
+   once selected (see specs/appearance/spec.md, "Recurring tasks have their
+   own color in both themes"). */
 .priority-group__marker[data-priority='recurring'] {
-  background: var(--text-muted);
+  background: var(--recurring-marker);
 }
 
 .priority-group__title {

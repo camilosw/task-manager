@@ -266,7 +266,7 @@ export function TaskForm({
           </button>
           <button
             type="button"
-            className="task-form__chip"
+            className="task-form__chip task-form__chip--recurring"
             aria-pressed={taskType === 'recurring'}
             onClick={() => setTaskType('recurring')}
           >
