@@ -92,9 +92,9 @@
 
 ## 12. Reordering boundary
 
-- [ ] 12.1 Test first in `src/ui/AllTabReordering.test.tsx`: a recurring task is reordered within the Recurring group and no priority group changes. Pins reordering inside the new group.
-- [ ] 12.2 Test first: dropping a recurring task onto a priority group, and a one-off task onto the Recurring group, leaves every place unchanged and converts neither task. Pins the boundary in both directions.
-- [ ] 12.3 Test first: the Recurring group is reorderable by keyboard alone and cannot be left by keyboard. Pins parity with the priority groups.
+- [x] 12.1 Test first in `src/ui/AllTabReordering.test.tsx`: a recurring task is reordered within the Recurring group and no priority group changes. Pins reordering inside the new group.
+- [x] 12.2 Test first: dropping a recurring task onto a priority group, and a one-off task onto the Recurring group, leaves every place unchanged and converts neither task. Pins the boundary in both directions.
+- [x] 12.3 Test first: the Recurring group is reorderable by keyboard alone and cannot be left by keyboard. Pins parity with the priority groups.
 
 ## 13. Appearance
 
