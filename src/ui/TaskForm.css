@@ -124,6 +124,18 @@
   color: var(--priority-very-low-fg);
 }
 
+/* The plain-language echo of the rule being built (design.md, decision 11):
+   a normal readable text node, so it needs no styling beyond the form's
+   other secondary text, and an always-mounted `role="status"` container so
+   assistive technology picks up its updates rather than only its initial
+   render. */
+.task-form__echo {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  min-height: 1em;
+}
+
 .task-form__errors {
   padding: 10px 12px;
   border-radius: 9px;

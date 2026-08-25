@@ -64,15 +64,15 @@
 
 ## 9. The creation and edit form
 
-- [ ] 9.1 Test first in a new `src/ui/RecurringTaskForm.test.tsx`: the form offers a task type choice defaulting to one-off, with the priority chips shown and no rule builder. Pins the default.
-- [ ] 9.2 Test first: choosing Recurring hides the priority chips and shows the rule builder. Pins the exclusion being visible, not just validated.
-- [ ] 9.3 Test first: the weekly builder multi-selects weekdays, so Monday and Wednesday can both be active. Pins multi-day rules.
-- [ ] 9.4 Test first: the monthly builder single-selects a position and a weekday. Pins the nth-weekday path.
-- [ ] 9.5 Test first: the plain-language echo renders for a weekly rule, a multi-day weekly rule, and a monthly rule. Pins the confirmation line.
-- [ ] 9.6 Test first: switching the task type keeps the name and duration already entered. Pins that the switch is not destructive.
-- [ ] 9.7 Test first: a rejected recurring creation keeps the form open with the type still recurring and the built rule intact. Pins the rejection path.
-- [ ] 9.8 Test first: the edit form pre-fills a recurring task's type and rule, and cancelling restores the row unchanged. Pins editing.
-- [ ] 9.9 Test first: the type choice and every rule control are reachable and operable from the keyboard, and the echo is available to assistive technology. Pins the accessibility requirement.
+- [x] 9.1 Test first in a new `src/ui/RecurringTaskForm.test.tsx`: the form offers a task type choice defaulting to one-off, with the priority chips shown and no rule builder. Pins the default.
+- [x] 9.2 Test first: choosing Recurring hides the priority chips and shows the rule builder. Pins the exclusion being visible, not just validated.
+- [x] 9.3 Test first: the weekly builder multi-selects weekdays, so Monday and Wednesday can both be active. Pins multi-day rules.
+- [x] 9.4 Test first: the monthly builder single-selects a position and a weekday. Pins the nth-weekday path.
+- [x] 9.5 Test first: the plain-language echo renders for a weekly rule, a multi-day weekly rule, and a monthly rule. Pins the confirmation line.
+- [x] 9.6 Test first: switching the task type keeps the name and duration already entered. Pins that the switch is not destructive.
+- [x] 9.7 Test first: a rejected recurring creation keeps the form open with the type still recurring and the built rule intact. Pins the rejection path.
+- [x] 9.8 Test first: the edit form pre-fills a recurring task's type and rule, and cancelling restores the row unchanged. Pins editing.
+- [x] 9.9 Test first: the type choice and every rule control are reachable and operable from the keyboard, and the echo is available to assistive technology. Pins the accessibility requirement.
 
 ## 10. Task rows and groups
 
