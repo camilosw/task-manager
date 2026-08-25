@@ -1,11 +1,11 @@
 ## 1. Recurrence rules in the domain
 
-- [ ] 1.1 Test first in `src/domain/recurrence.test.ts`: `occursOn` returns true for a weekly rule on its named weekday and false on all six others. Pins the weekly predicate and creates the module.
-- [ ] 1.2 Test first: a weekly rule naming Monday and Wednesday fires on both and on nothing else. Pins that one rule produces several occurrences per week.
-- [ ] 1.3 Test first: a `first Monday` monthly rule fires on 3 August 2026 and 7 September 2026 and not on 10, 17, 24, or 31 August. Pins nth-weekday resolution against the spec's traced months.
-- [ ] 1.4 Test first: `nth: -1` resolves to 31 August 2026 (five Mondays) and 28 September 2026 (four Mondays). Pins "last" in both month shapes.
-- [ ] 1.5 Test first: rule validation rejects a weekly rule with no weekday, and a monthly rule missing its position or its weekday. Pins the incomplete-rule case the form relies on.
-- [ ] 1.6 Test first: `formatRule` renders the long form ("Repeats every Monday and Wednesday", "Repeats the first Monday of every month") and the short form ("Every Mon", "1st Mon"). Pins both strings the UI needs before any component reads them.
+- [x] 1.1 Test first in `src/domain/recurrence.test.ts`: `occursOn` returns true for a weekly rule on its named weekday and false on all six others. Pins the weekly predicate and creates the module.
+- [x] 1.2 Test first: a weekly rule naming Monday and Wednesday fires on both and on nothing else. Pins that one rule produces several occurrences per week.
+- [x] 1.3 Test first: a `first Monday` monthly rule fires on 3 August 2026 and 7 September 2026 and not on 10, 17, 24, or 31 August. Pins nth-weekday resolution against the spec's traced months.
+- [x] 1.4 Test first: `nth: -1` resolves to 31 August 2026 (five Mondays) and 28 September 2026 (four Mondays). Pins "last" in both month shapes.
+- [x] 1.5 Test first: rule validation rejects a weekly rule with no weekday, and a monthly rule missing its position or its weekday. Pins the incomplete-rule case the form relies on.
+- [x] 1.6 Test first: `formatRule` renders the long form ("Repeats every Monday and Wednesday", "Repeats the first Monday of every month") and the short form ("Every Mon", "1st Mon"). Pins both strings the UI needs before any component reads them.
 
 ## 2. Due-ness in the domain
 
