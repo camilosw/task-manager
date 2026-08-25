@@ -9,6 +9,10 @@ const FIELD_MESSAGES: Record<TaskValidationField, string> = {
   name: 'Name is required.',
   duration: 'Duration is required.',
   priority: 'Priority is required.',
+  // Not yet reachable from this form — the rule builder is tasks.md
+  // section 9's job — but `TaskValidationField` (src/domain/task.ts) now
+  // includes `'rule'`, so this record must cover it to stay exhaustive.
+  rule: 'A repetition rule is required.',
 }
 
 /** The values a `TaskForm` submits: a raw name plus whichever duration and

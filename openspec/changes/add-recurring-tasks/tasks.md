@@ -20,13 +20,13 @@
 
 ## 3. The task record
 
-- [ ] 3.1 Test first in `src/domain/task.test.ts`: `createTask` with a rule produces a task carrying the rule, a null priority, and no recorded last completion. Pins the recurring shape.
-- [ ] 3.2 Test first: `createTask` rejects an input carrying both a priority and a rule, and one carrying neither. Pins the mutual exclusion.
-- [ ] 3.3 Test first: a recurring creation missing name, duration, and rule reports all three at once. Pins that the existing report-every-missing-field behavior extends to the rule.
-- [ ] 3.4 Test first: `editTask` converts one-off to recurring and back, leaving name, duration, creation timestamp, place, and last completion date untouched. Pins conversion.
-- [ ] 3.5 Test first: `editTask` rejects an edit that would leave a task with neither a priority nor a complete rule. Pins the invariant under editing.
-- [ ] 3.6 Test first: `completeTask` on a recurring task sets `completedAt` and records the local date as its last completion; on a one-off task it sets only `completedAt`. Pins the two-field model.
-- [ ] 3.7 Mechanical, no new behavior: widen `Task` to `priority: Priority | null` plus `recurrence` and `lastCompletedOn`, and update every call site and test factory the compiler flags. `tsc -b` passes with no behavior change. Do not add a null branch to `comparePriority` — see design.md, Risks.
+- [x] 3.1 Test first in `src/domain/task.test.ts`: `createTask` with a rule produces a task carrying the rule, a null priority, and no recorded last completion. Pins the recurring shape.
+- [x] 3.2 Test first: `createTask` rejects an input carrying both a priority and a rule, and one carrying neither. Pins the mutual exclusion.
+- [x] 3.3 Test first: a recurring creation missing name, duration, and rule reports all three at once. Pins that the existing report-every-missing-field behavior extends to the rule.
+- [x] 3.4 Test first: `editTask` converts one-off to recurring and back, leaving name, duration, creation timestamp, place, and last completion date untouched. Pins conversion.
+- [x] 3.5 Test first: `editTask` rejects an edit that would leave a task with neither a priority nor a complete rule. Pins the invariant under editing.
+- [x] 3.6 Test first: `completeTask` on a recurring task sets `completedAt` and records the local date as its last completion; on a one-off task it sets only `completedAt`. Pins the two-field model.
+- [x] 3.7 Mechanical, no new behavior: widen `Task` to `priority: Priority | null` plus `recurrence` and `lastCompletedOn`, and update every call site and test factory the compiler flags. `tsc -b` passes with no behavior change. Do not add a null branch to `comparePriority` — see design.md, Risks.
 
 ## 4. Reawakening
 

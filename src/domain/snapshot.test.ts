@@ -14,9 +14,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00Z'),
     completedAt: null,
     place: 0,
+    lastCompletedOn: null,
     ...overrides,
   }
 }

@@ -1,4 +1,5 @@
 import { comparePriority } from './priority'
+import type { Priority } from './priority'
 import type { Task } from './task'
 
 /**
@@ -20,7 +21,17 @@ export const DAILY_BUDGET_MINUTES = 60
  * specs/daily-plan/spec.md, "Ordering within the selection").
  */
 export function compareForSelection(a: Task, b: Task): number {
-  const byPriority = comparePriority(a.priority, b.priority)
+  // `Task.priority` is `Priority | null` (tasks.md section 3 widens it for
+  // recurring tasks), but ordering recurring tasks ahead of the priority
+  // axis — rather than sorting them within it — is section 5's job (see
+  // design.md, decision 6, and the Risks note against giving
+  // `comparePriority` a null branch). Until that lands, every task reaching
+  // this comparator is still one-off, so the assertion changes no behavior;
+  // it only defers the real partitioning to section 5.
+  const byPriority = comparePriority(
+    a.priority as Priority,
+    b.priority as Priority,
+  )
   if (byPriority !== 0) {
     return byPriority
   }

@@ -19,9 +19,11 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -207,9 +209,11 @@ function mediumTask(id: string, name: string, place: number): Task {
     name,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00.000Z'),
     place,
     completedAt: null,
+    lastCompletedOn: null,
   }
 }
 
@@ -278,9 +282,11 @@ describe('the keyboard path cannot leave the group (8.6)', () => {
       name: 'Low task',
       duration: 30,
       priority: 'low',
+      recurrence: null,
       createdAt: new Date('2026-08-17T09:00:00.000Z'),
       place: 2,
       completedAt: null,
+      lastCompletedOn: null,
     }
 
     const repository = createInMemoryRepository()
@@ -486,9 +492,11 @@ describe('a rejected or abandoned drag confirms nothing (9.6)', () => {
       name: 'Low task',
       duration: 30,
       priority: 'low',
+      recurrence: null,
       createdAt: new Date('2026-08-17T09:00:00.000Z'),
       place: 2,
       completedAt: null,
+      lastCompletedOn: null,
     }
 
     const repository = createInMemoryRepository()

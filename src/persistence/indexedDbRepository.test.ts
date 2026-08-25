@@ -15,7 +15,10 @@ const LEGACY_TASKS_STORE = 'tasks'
 const LEGACY_SNAPSHOT_STORE = 'snapshot'
 const LEGACY_SNAPSHOT_KEY = 'current'
 
-type LegacyTask = Omit<Task, 'place'>
+// Version 1 predates `place` (added in version 2) and also predates
+// `recurrence`/`lastCompletedOn` (added in version 3, tasks.md section 7),
+// so a legacy fixture omits all three.
+type LegacyTask = Omit<Task, 'place' | 'recurrence' | 'lastCompletedOn'>
 
 /**
  * Opens `dbName` at version 1 — the schema that predates `place` — and
@@ -95,9 +98,11 @@ describe('database identity across instances', () => {
       name: 'Survive a reopen',
       duration: 30,
       priority: 'high',
+      recurrence: null,
       createdAt: new Date('2026-08-17T09:00:00.000Z'),
       place: 0,
       completedAt: null,
+      lastCompletedOn: null,
     }
     const snapshot: DaySnapshot = {
       date: '2026-08-17',
@@ -297,18 +302,22 @@ describe('version-2 upgrade (5.2-5.5)', () => {
         name: 'One',
         duration: 15,
         priority: 'medium',
+        recurrence: null,
         createdAt: new Date('2026-08-17T09:00:00.000Z'),
         place: 7,
         completedAt: null,
+        lastCompletedOn: null,
       },
       {
         id: 'two',
         name: 'Two',
         duration: 15,
         priority: 'medium',
+        recurrence: null,
         createdAt: new Date('2026-08-17T08:00:00.000Z'),
         place: 2,
         completedAt: null,
+        lastCompletedOn: null,
       },
     ])
 

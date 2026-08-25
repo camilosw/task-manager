@@ -8,15 +8,18 @@ import {
   reorderWithinPriority,
 } from './task'
 import { compareForSelection } from './dailyPlan'
+import type { RecurrenceRule } from './recurrence'
 
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
   return {
     name: overrides.id,
     duration: 30,
     priority: 'medium',
+    recurrence: null,
     createdAt: new Date('2026-08-17T09:00:00Z'),
     place: 0,
     completedAt: null,
+    lastCompletedOn: null,
     ...overrides,
   }
 }
@@ -43,9 +46,11 @@ describe('createTask', () => {
       name: 'Review the PR',
       duration: 30,
       priority: 'high',
+      recurrence: null,
       createdAt: now,
       place: 0,
       completedAt: null,
+      lastCompletedOn: null,
     })
   })
 
@@ -148,6 +153,84 @@ describe('createTask', () => {
       errors: ['name', 'duration', 'priority'],
     })
   })
+
+  // 3.1: a recurring creation carries the rule, a null priority, and no
+  // recorded last completion (see specs/task-management/spec.md, "A created
+  // recurring task carries all attributes").
+  it('creates a recurring task carrying the rule, a null priority, and no recorded last completion', () => {
+    const rule: RecurrenceRule = { kind: 'weekly', weekdays: [1] }
+
+    const result = createTask(
+      {
+        id: 'task-1',
+        name: 'Weekly review',
+        duration: 30,
+        priority: undefined,
+        recurrence: rule,
+        place: 0,
+      },
+      now,
+    )
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.task.recurrence).toEqual(rule)
+    expect(result.task.priority).toBeNull()
+    expect(result.task.lastCompletedOn).toBeNull()
+  })
+
+  // 3.2: the mutual exclusion between a priority and a rule (see
+  // specs/recurring-tasks/spec.md, "A task cannot carry both a priority and
+  // a rule").
+  it('rejects an input carrying both a priority and a rule, and one carrying neither', () => {
+    const both = createTask(
+      {
+        id: 'task-1',
+        name: 'Weekly review',
+        duration: 30,
+        priority: 'high',
+        recurrence: { kind: 'weekly', weekdays: [1] },
+        place: 0,
+      },
+      now,
+    )
+    expect(both.ok).toBe(false)
+
+    const neither = createTask(
+      {
+        id: 'task-1',
+        name: 'Weekly review',
+        duration: 30,
+        priority: undefined,
+        recurrence: undefined,
+        place: 0,
+      },
+      now,
+    )
+    expect(neither.ok).toBe(false)
+  })
+
+  // 3.3: the existing report-every-missing-field behavior extends to the
+  // rule (see specs/recurring-tasks/spec.md, "An incomplete rule is
+  // rejected").
+  it('reports name, duration, and rule together for a recurring creation missing all three', () => {
+    const result = createTask(
+      {
+        id: 'task-1',
+        name: '   ',
+        duration: undefined,
+        priority: undefined,
+        recurrence: { kind: 'weekly', weekdays: [] },
+        place: 0,
+      },
+      now,
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      errors: ['name', 'duration', 'rule'],
+    })
+  })
 })
 
 describe('nextPlace', () => {
@@ -182,9 +265,11 @@ describe('editTask', () => {
     name: 'Review the PR',
     duration: 30,
     priority: 'high',
+    recurrence: null,
     createdAt,
     place: 2,
     completedAt: null,
+    lastCompletedOn: null,
   } as const
 
   it('applies the new name, duration, and priority', () => {
@@ -253,6 +338,68 @@ describe('editTask', () => {
 
     expect(result).toEqual({ ok: false, errors: ['name'] })
   })
+
+  // 3.4: converting between one-off and recurring leaves name, duration,
+  // creation timestamp, place, and last completion date untouched (see
+  // specs/task-management/spec.md, "Converting a task between one-off and
+  // recurring").
+  it('converts a one-off task to recurring, leaving name, duration, creation timestamp, place, and last completion untouched', () => {
+    const lastCompletedTask = { ...task, lastCompletedOn: '2026-08-10' }
+    const rule: RecurrenceRule = { kind: 'weekly', weekdays: [1] }
+
+    const result = editTask(lastCompletedTask, {
+      name: lastCompletedTask.name,
+      duration: lastCompletedTask.duration,
+      recurrence: rule,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.task.recurrence).toEqual(rule)
+    expect(result.task.priority).toBeNull()
+    expect(result.task.name).toBe(lastCompletedTask.name)
+    expect(result.task.duration).toBe(lastCompletedTask.duration)
+    expect(result.task.createdAt).toBe(lastCompletedTask.createdAt)
+    expect(result.task.place).toBe(lastCompletedTask.place)
+    expect(result.task.lastCompletedOn).toBe(lastCompletedTask.lastCompletedOn)
+  })
+
+  it('converts a recurring task back to one-off, leaving name, duration, creation timestamp, place, and last completion untouched', () => {
+    const recurringTask = {
+      ...task,
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] } as RecurrenceRule,
+      lastCompletedOn: '2026-08-10',
+    }
+
+    const result = editTask(recurringTask, {
+      name: recurringTask.name,
+      duration: recurringTask.duration,
+      priority: 'medium',
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.task.priority).toBe('medium')
+    expect(result.task.recurrence).toBeNull()
+    expect(result.task.name).toBe(recurringTask.name)
+    expect(result.task.duration).toBe(recurringTask.duration)
+    expect(result.task.createdAt).toBe(recurringTask.createdAt)
+    expect(result.task.place).toBe(recurringTask.place)
+    expect(result.task.lastCompletedOn).toBe(recurringTask.lastCompletedOn)
+  })
+
+  // 3.5: the invariant holds under editing too (see
+  // specs/task-management/spec.md, "An edit cannot leave a task with
+  // neither a priority nor a rule").
+  it('rejects an edit that would leave neither a priority nor a complete rule', () => {
+    const result = editTask(task, {
+      name: task.name,
+      duration: task.duration,
+    })
+
+    expect(result).toEqual({ ok: false, errors: ['priority'] })
+  })
 })
 
 describe('completeTask', () => {
@@ -263,9 +410,11 @@ describe('completeTask', () => {
     name: 'Review the PR',
     duration: 30,
     priority: 'high',
+    recurrence: null,
     createdAt,
     place: 3,
     completedAt: null,
+    lastCompletedOn: null,
   } as const
 
   it('records the completion time from the injected now', () => {
@@ -284,6 +433,33 @@ describe('completeTask', () => {
     const completed = completeTask(task, completedAt)
 
     expect(completed).toEqual({ ...task, completedAt })
+  })
+
+  // 3.6: the two-field completion model (see design.md, decision 3, and
+  // specs/recurring-tasks/spec.md, "Completing a recurring task puts it to
+  // rest, it does not end it"). Constructed with the local `Date` — not a
+  // UTC ISO string — so `toLocalDateString` resolves to the intended
+  // calendar date regardless of the test environment's time zone (see
+  // src/domain/dayBoundary.test.ts's own convention).
+  it('records completedAt and the local date as the last completion on a recurring task', () => {
+    const recurringTask = {
+      ...task,
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] } as RecurrenceRule,
+    }
+    const recurringCompletedAt = new Date(2026, 7, 24, 15, 30, 0)
+
+    const completed = completeTask(recurringTask, recurringCompletedAt)
+
+    expect(completed.completedAt).toBe(recurringCompletedAt)
+    expect(completed.lastCompletedOn).toBe('2026-08-24')
+  })
+
+  it('sets only completedAt on a one-off task, leaving lastCompletedOn null', () => {
+    const completed = completeTask(task, completedAt)
+
+    expect(completed.completedAt).toBe(completedAt)
+    expect(completed.lastCompletedOn).toBeNull()
   })
 })
 

@@ -1,5 +1,6 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { formatDuration } from '../domain/duration'
+import type { Priority } from '../domain/priority'
 import type {
   EditTaskInput,
   EditTaskResult,
@@ -102,7 +103,12 @@ export function TaskItem({
           initialValues={{
             name: task.name,
             duration: task.duration,
-            priority: task.priority,
+            // `task.priority` is `Priority | null` (tasks.md section 3), but
+            // recurring tasks have no rule builder to pre-fill yet — that is
+            // section 9's job. `?? undefined` is a type-only coercion with
+            // no behavioral effect today, since every task reaching this
+            // form is still one-off.
+            priority: task.priority ?? undefined,
           }}
           onSubmit={handleEditSubmit}
           onCancel={() => setIsEditing(false)}
@@ -138,7 +144,11 @@ export function TaskItem({
             {formatDuration(task.duration)}
           </span>
           <span className="task-row__priority" data-priority={task.priority}>
-            {PRIORITY_LABELS[task.priority]}
+            {/* `task.priority` is `Priority | null` (tasks.md section 3).
+                Showing a recurring task's rule here instead of a priority
+                label is section 10's job; the assertion below keeps this
+                row's current, one-off-only rendering unchanged until then. */}
+            {PRIORITY_LABELS[task.priority as Priority]}
           </span>
         </div>
       </div>
