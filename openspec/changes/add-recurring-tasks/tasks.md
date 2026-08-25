@@ -56,11 +56,11 @@
 
 ## 8. Application state
 
-- [ ] 8.1 Test first in `src/ui/AppStateProvider.test.tsx`: on load, reawakening runs before the plan is recomputed, and the reawakened tasks are persisted. Pins the pipeline order from design.md, decision 8.
-- [ ] 8.2 Test first in `src/ui/Rollover.test.tsx`: a recurring task completed last Monday appears pending, not struck through, after a rollover to the following Monday. Pins the reawaken-then-select sequence end to end.
-- [ ] 8.3 Test first: a recurring task completed on Tuesday is not brought back by "Recalculate today" on Wednesday. Pins the user's stated case.
-- [ ] 8.4 Test first: reopening after several days away with a missed occurrence produces one plan containing exactly one instance of the recurring task. Pins non-accumulation through the real state path.
-- [ ] 8.5 Test first: creating a recurring task mid-day on a date its rule fires admits it into the current snapshot and persists it. Pins mid-day admission through the provider.
+- [x] 8.1 Test first in `src/ui/AppStateProvider.test.tsx`: on load, reawakening runs before the plan is recomputed, and the reawakened tasks are persisted. Pins the pipeline order from design.md, decision 8.
+- [x] 8.2 Test first in `src/ui/Rollover.test.tsx`: a recurring task completed last Monday appears pending, not struck through, after a rollover to the following Monday. Pins the reawaken-then-select sequence end to end.
+- [x] 8.3 Test first: a recurring task completed on Tuesday is not brought back by "Recalculate today" on Wednesday. Pins the user's stated case.
+- [x] 8.4 Test first: reopening after several days away with a missed occurrence produces one plan containing exactly one instance of the recurring task. Pins non-accumulation through the real state path.
+- [x] 8.5 Test first: creating a recurring task mid-day on a date its rule fires admits it into the current snapshot and persists it. Pins mid-day admission through the provider.
 
 ## 9. The creation and edit form
 

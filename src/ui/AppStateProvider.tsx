@@ -11,6 +11,7 @@ import {
   type Task,
 } from '../domain/task'
 import { needsRecompute } from '../domain/dayBoundary'
+import { reawaken } from '../domain/recurrence'
 import {
   admitIfUnconditional,
   pruneTaskId,
@@ -66,6 +67,36 @@ function requestPersistentStorage(): void {
   navigator.storage.persist().catch(() => {
     // Refusal is an expected, silent outcome — see the comment above.
   })
+}
+
+/**
+ * The shared body of every recomputation trigger — on load, on returning to
+ * the foreground, and on "Recalculate today" (see design.md, decision 8):
+ * first reawaken every recurring task that has become due again, persisting
+ * the change only when `reawaken` actually cleared something, and only then
+ * compute and persist the fresh snapshot. The order is not interchangeable —
+ * `recomputeSnapshot` calls `selectDailyPlan`, which filters on
+ * `completedAt === null`, so a task whose completion has not yet been
+ * cleared would be filtered out and would miss its own occurrence.
+ *
+ * A module-level function taking `repository`/`now` as parameters, rather
+ * than a closure inside `AppStateProvider`, so the `useEffect`s that call it
+ * (see below) do not need it in their dependency arrays — it is already
+ * exactly as stable as `repository`/`now` themselves, which those effects
+ * already depend on.
+ */
+async function reawakenAndRecompute(
+  repository: Repository,
+  now: () => Date,
+  tasks: Task[],
+): Promise<{ tasks: Task[]; snapshot: DaySnapshot }> {
+  const reawakened = reawaken(tasks, now())
+  if (reawakened !== tasks) {
+    await repository.saveTasks(reawakened)
+  }
+  const snapshot = recomputeSnapshot(reawakened, now())
+  await repository.saveSnapshot(snapshot)
+  return { tasks: reawakened, snapshot }
 }
 
 export type AppStateProviderProps = {
@@ -129,10 +160,9 @@ export function AppStateProvider({
     let cancelled = false
 
     async function recomputeAndSet(tasks: Task[]) {
-      const snapshot = recomputeSnapshot(tasks, now())
-      await repository.saveSnapshot(snapshot)
+      const result = await reawakenAndRecompute(repository, now, tasks)
       if (cancelled) return
-      dispatch({ type: 'set', tasks, snapshot })
+      dispatch({ type: 'set', tasks: result.tasks, snapshot: result.snapshot })
     }
 
     async function load() {
@@ -169,9 +199,16 @@ export function AppStateProvider({
       if (!needsRecompute(current.snapshot.date, now())) return
 
       void (async () => {
-        const snapshot = recomputeSnapshot(current.tasks, now())
-        await repository.saveSnapshot(snapshot)
-        dispatch({ type: 'set', tasks: current.tasks, snapshot })
+        const result = await reawakenAndRecompute(
+          repository,
+          now,
+          current.tasks,
+        )
+        dispatch({
+          type: 'set',
+          tasks: result.tasks,
+          snapshot: result.snapshot,
+        })
       })()
     }
 
@@ -195,6 +232,7 @@ export function AppStateProvider({
         name: input.name,
         duration: input.duration,
         priority: input.priority,
+        recurrence: input.recurrence,
         place: nextPlace(loaded.tasks),
       },
       now(),
@@ -323,9 +361,17 @@ export function AppStateProvider({
     }
     const loaded = data
 
-    const snapshot = recomputeSnapshot(loaded.tasks, now())
-    dispatch({ type: 'set', tasks: loaded.tasks, snapshot })
-    await repository.saveSnapshot(snapshot)
+    // Recalculation shares the same reawaken-then-recompute pipeline as
+    // load and foreground return (see design.md, decision 8): a recurring
+    // task that has become due again must have its completion cleared
+    // before the selection runs, or `selectDailyPlan`'s
+    // `completedAt === null` filter would keep excluding it even though it
+    // is genuinely due. For a task that is not due, `reawaken` is a no-op,
+    // so this never resurrects a task the user completed earlier in its
+    // current cycle (see specs/recurring-tasks/spec.md, "Completing late,
+    // then recalculating the next day").
+    const result = await reawakenAndRecompute(repository, now, loaded.tasks)
+    dispatch({ type: 'set', tasks: result.tasks, snapshot: result.snapshot })
   }
 
   const value: AppState =
