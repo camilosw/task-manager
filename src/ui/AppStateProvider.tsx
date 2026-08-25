@@ -12,10 +12,10 @@ import {
 } from '../domain/task'
 import { needsRecompute } from '../domain/dayBoundary'
 import {
-  admitIfUrgent,
+  admitIfUnconditional,
   pruneTaskId,
   recomputeSnapshot,
-  removeIfNoLongerUrgent,
+  removeIfNoLongerUnconditional,
   type DaySnapshot,
 } from '../domain/snapshot'
 import type { Repository } from '../persistence/repository'
@@ -205,7 +205,7 @@ export function AppStateProvider({
 
     const nextTasks = [...loaded.tasks, result.task]
     const nextSnapshot = loaded.snapshot
-      ? admitIfUrgent(loaded.snapshot, result.task)
+      ? admitIfUnconditional(loaded.snapshot, result.task, now())
       : loaded.snapshot
 
     dispatch({ type: 'set', tasks: nextTasks, snapshot: nextSnapshot })
@@ -241,8 +241,12 @@ export function AppStateProvider({
     )
     let nextSnapshot = loaded.snapshot
     if (nextSnapshot) {
-      nextSnapshot = admitIfUrgent(nextSnapshot, result.task)
-      nextSnapshot = removeIfNoLongerUrgent(nextSnapshot, result.task)
+      nextSnapshot = admitIfUnconditional(nextSnapshot, result.task, now())
+      nextSnapshot = removeIfNoLongerUnconditional(
+        nextSnapshot,
+        result.task,
+        now(),
+      )
     }
 
     dispatch({ type: 'set', tasks: nextTasks, snapshot: nextSnapshot })

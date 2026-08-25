@@ -43,9 +43,9 @@
 
 ## 6. Snapshot admission
 
-- [ ] 6.1 Test first in `src/domain/snapshot.test.ts`: `admitIfUnconditional` admits a recurring task created mid-day on a date its rule fires, and does not admit one created on a date it does not. Pins mid-day admission.
-- [ ] 6.2 Test first: `removeIfNoLongerUnconditional` drops a task converted from due-recurring to a non-urgent one-off from `admittedIds`, and never touches `plannedIds`. Pins the existing asymmetry under the new case.
-- [ ] 6.3 Test first: the existing urgent admission and removal scenarios still hold under the generalised functions. Pins that urgent behavior is unchanged.
+- [x] 6.1 Test first in `src/domain/snapshot.test.ts`: `admitIfUnconditional` admits a recurring task created mid-day on a date its rule fires, and does not admit one created on a date it does not. Pins mid-day admission.
+- [x] 6.2 Test first: `removeIfNoLongerUnconditional` drops a task converted from due-recurring to a non-urgent one-off from `admittedIds`, and never touches `plannedIds`. Pins the existing asymmetry under the new case.
+- [x] 6.3 Test first: the existing urgent admission and removal scenarios still hold under the generalised functions. Pins that urgent behavior is unchanged.
 
 ## 7. Persistence
 

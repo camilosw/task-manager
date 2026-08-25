@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { Task } from './task'
 import type { DaySnapshot } from './snapshot'
 import {
-  admitIfUrgent,
+  admitIfUnconditional,
   pruneTaskId,
   recomputeSnapshot,
-  removeIfNoLongerUrgent,
+  removeIfNoLongerUnconditional,
   resolveSnapshotTasks,
 } from './snapshot'
 
@@ -52,7 +52,12 @@ describe('resolveSnapshotTasks', () => {
   })
 })
 
-describe('admitIfUrgent', () => {
+describe('admitIfUnconditional', () => {
+  // now is fixed at Monday 24 August 2026 for every test in this block
+  // unless a test overrides it locally to exercise a recurring rule against
+  // a different calendar date.
+  const now = new Date(2026, 7, 24, 9, 0, 0)
+
   it('appends a pending task that just became urgent to admittedIds', () => {
     const snapshot: DaySnapshot = {
       date: '2026-08-17',
@@ -61,7 +66,7 @@ describe('admitIfUrgent', () => {
     }
     const urgentTask = makeTask({ id: 'urgent-1', priority: 'urgent' })
 
-    const next = admitIfUrgent(snapshot, urgentTask)
+    const next = admitIfUnconditional(snapshot, urgentTask, now)
 
     expect(next.admittedIds).toEqual(['urgent-1'])
   })
@@ -74,7 +79,7 @@ describe('admitIfUrgent', () => {
     }
     const urgentTask = makeTask({ id: 'urgent-2', priority: 'urgent' })
 
-    const next = admitIfUrgent(snapshot, urgentTask)
+    const next = admitIfUnconditional(snapshot, urgentTask, now)
 
     expect(next.plannedIds).toEqual(['planned-1', 'planned-2'])
     expect(next.admittedIds).toEqual(['admitted-1', 'urgent-2'])
@@ -88,7 +93,7 @@ describe('admitIfUrgent', () => {
     }
     const highTask = makeTask({ id: 'high-1', priority: 'high' })
 
-    const next = admitIfUrgent(snapshot, highTask)
+    const next = admitIfUnconditional(snapshot, highTask, now)
 
     expect(next.admittedIds).toEqual([])
   })
@@ -101,7 +106,7 @@ describe('admitIfUrgent', () => {
     }
     const task = makeTask({ id: 'already-planned', priority: 'urgent' })
 
-    const next = admitIfUrgent(snapshot, task)
+    const next = admitIfUnconditional(snapshot, task, now)
 
     expect(next.plannedIds).toEqual(['already-planned'])
     expect(next.admittedIds).toEqual([])
@@ -115,13 +120,64 @@ describe('admitIfUrgent', () => {
     }
     const task = makeTask({ id: 'already-admitted', priority: 'urgent' })
 
-    const next = admitIfUrgent(snapshot, task)
+    const next = admitIfUnconditional(snapshot, task, now)
 
     expect(next.admittedIds).toEqual(['already-admitted'])
   })
+
+  // Task 6.1 (tasks.md): mid-day admission generalized to a due recurring
+  // task, mirroring specs/daily-plan/spec.md, "A recurring task created
+  // mid-day on one of its own occurrence dates is admitted" and "A recurring
+  // task created on a date its rule does not fire waits".
+  it('admits a recurring task created mid-day on a date its rule fires', () => {
+    const snapshot: DaySnapshot = {
+      date: '2026-08-24',
+      plannedIds: [],
+      admittedIds: [],
+    }
+    // Monday 24 August 2026, created mid-day (13:30), current time later
+    // the same day — the task is due the day it is created (design.md,
+    // decision 2's createdOn floor).
+    const recurringTask = makeTask({
+      id: 'r1',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date(2026, 7, 24, 13, 30, 0),
+    })
+
+    const next = admitIfUnconditional(snapshot, recurringTask, now)
+
+    expect(next.admittedIds).toEqual(['r1'])
+  })
+
+  it('does not admit a recurring task created on a date its rule does not fire', () => {
+    const tuesday = new Date(2026, 7, 25, 9, 0, 0)
+    const snapshot: DaySnapshot = {
+      date: '2026-08-25',
+      plannedIds: [],
+      admittedIds: [],
+    }
+    // Tuesday 25 August 2026: a weekly-Monday rule does not fire, so the
+    // task is not due the day it is created.
+    const recurringTask = makeTask({
+      id: 'r1',
+      priority: null,
+      recurrence: { kind: 'weekly', weekdays: [1] },
+      createdAt: new Date(2026, 7, 25, 13, 30, 0),
+    })
+
+    const next = admitIfUnconditional(snapshot, recurringTask, tuesday)
+
+    expect(next.admittedIds).toEqual([])
+  })
 })
 
-describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)', () => {
+describe('removeIfNoLongerUnconditional (asymmetry between admittedIds and plannedIds)', () => {
+  // now is fixed at Monday 24 August 2026 for every test in this block —
+  // removal by priority does not depend on the date, and the recurring
+  // cases below use the same reference date their rule fires on.
+  const now = new Date(2026, 7, 24, 9, 0, 0)
+
   it('removes a task from admittedIds once it stops being urgent', () => {
     const snapshot: DaySnapshot = {
       date: '2026-08-17',
@@ -130,7 +186,7 @@ describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)'
     }
     const deprioritized = makeTask({ id: 'admitted-1', priority: 'medium' })
 
-    const next = removeIfNoLongerUrgent(snapshot, deprioritized)
+    const next = removeIfNoLongerUnconditional(snapshot, deprioritized, now)
 
     expect(next.admittedIds).toEqual([])
   })
@@ -150,7 +206,7 @@ describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)'
     // plannedIds), so admission is a no-op — it must not be added to
     // admittedIds too.
     const frozenAsUrgent = makeTask({ id: 'frozen-1', priority: 'urgent' })
-    snapshot = admitIfUrgent(snapshot, frozenAsUrgent)
+    snapshot = admitIfUnconditional(snapshot, frozenAsUrgent, now)
     expect(snapshot).toEqual({
       date: '2026-08-17',
       plannedIds: ['frozen-1'],
@@ -159,7 +215,7 @@ describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)'
 
     // Meanwhile an unrelated task is created urgent and admitted for real.
     const admitted = makeTask({ id: 'admitted-1', priority: 'urgent' })
-    snapshot = admitIfUrgent(snapshot, admitted)
+    snapshot = admitIfUnconditional(snapshot, admitted, now)
 
     // Now both are edited back to a non-urgent priority.
     const frozenBackToMedium = makeTask({
@@ -170,8 +226,12 @@ describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)'
       id: 'admitted-1',
       priority: 'medium',
     })
-    snapshot = removeIfNoLongerUrgent(snapshot, frozenBackToMedium)
-    snapshot = removeIfNoLongerUrgent(snapshot, admittedBackToMedium)
+    snapshot = removeIfNoLongerUnconditional(snapshot, frozenBackToMedium, now)
+    snapshot = removeIfNoLongerUnconditional(
+      snapshot,
+      admittedBackToMedium,
+      now,
+    )
 
     // The frozen task stays in plannedIds throughout; the admitted task is
     // removed because admittedIds membership can shrink.
@@ -187,9 +247,52 @@ describe('removeIfNoLongerUrgent (asymmetry between admittedIds and plannedIds)'
     }
     const stillUrgent = makeTask({ id: 'admitted-1', priority: 'urgent' })
 
-    const next = removeIfNoLongerUrgent(snapshot, stillUrgent)
+    const next = removeIfNoLongerUnconditional(snapshot, stillUrgent, now)
 
     expect(next.admittedIds).toEqual(['admitted-1'])
+  })
+
+  // Task 6.2 (tasks.md): the same asymmetry generalized to a task that was
+  // admitted as a due recurring task and is then converted to a non-urgent
+  // one-off, mirroring specs/daily-plan/spec.md, "A task that stops being a
+  // due recurring task leaves the plan".
+  it('drops a task converted from due-recurring to a non-urgent one-off from admittedIds, never touching plannedIds', () => {
+    const snapshot: DaySnapshot = {
+      date: '2026-08-24',
+      plannedIds: ['frozen-1'],
+      admittedIds: ['admitted-1'],
+    }
+    // admitted-1 was a due recurring task (weekly Monday, admitted on
+    // Monday 24 August) and has now been converted to a non-urgent one-off.
+    const convertedToOneOff = makeTask({
+      id: 'admitted-1',
+      priority: 'medium',
+      recurrence: null,
+    })
+
+    const next = removeIfNoLongerUnconditional(snapshot, convertedToOneOff, now)
+
+    expect(next.admittedIds).toEqual([])
+    expect(next.plannedIds).toEqual(['frozen-1'])
+  })
+
+  it('does not touch plannedIds when a frozen due-recurring task converts to a non-urgent one-off', () => {
+    const snapshot: DaySnapshot = {
+      date: '2026-08-24',
+      plannedIds: ['frozen-recurring-1'],
+      admittedIds: [],
+    }
+    const convertedToOneOff = makeTask({
+      id: 'frozen-recurring-1',
+      priority: 'medium',
+      recurrence: null,
+    })
+
+    const next = removeIfNoLongerUnconditional(snapshot, convertedToOneOff, now)
+
+    // Not present in admittedIds, so this is a no-op — plannedIds is never
+    // touched by this function regardless of what happens to the task.
+    expect(next).toEqual(snapshot)
   })
 })
 
@@ -293,7 +396,7 @@ describe('recomputeSnapshot', () => {
       priority: 'urgent',
       createdAt: new Date('2026-08-17T12:00:00Z'),
     })
-    snapshot = admitIfUrgent(snapshot, admittedTask)
+    snapshot = admitIfUnconditional(snapshot, admittedTask, day1)
     expect(snapshot.plannedIds).toEqual(['old-1'])
     expect(snapshot.admittedIds).toEqual(['admitted-old'])
 
