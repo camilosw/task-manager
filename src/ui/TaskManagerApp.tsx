@@ -152,8 +152,19 @@ export function TaskManagerApp() {
     )
   }
 
-  const pendingTasks = state.tasks.filter((task) => task.completedAt === null)
-  const completedTasks = state.tasks.filter((task) => task.completedAt !== null)
+  // A recurring task does not follow the ordinary pending/completed split
+  // (see design.md, decision 10, and specs/task-views/spec.md, "The All tab
+  // lists every pending task" / "The Completed tab lists every completed
+  // task"): it belongs in All at all times — due or at rest, completed
+  // moments ago or not — since All is the only surface it can be edited,
+  // reordered, or deleted from, and it never belongs in Completed, which
+  // stays a history of one-off work only.
+  const pendingTasks = state.tasks.filter(
+    (task) => task.recurrence !== null || task.completedAt === null,
+  )
+  const completedTasks = state.tasks.filter(
+    (task) => task.recurrence === null && task.completedAt !== null,
+  )
 
   // The All tab groups every pending task under priority headings (see
   // specs/task-views/spec.md, "The All tab groups tasks by priority"),

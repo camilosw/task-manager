@@ -84,11 +84,11 @@
 
 ## 11. Tab membership
 
-- [ ] 11.1 Test first in `src/ui/TaskViews.test.tsx`: the All tab lists a recurring task while it is due, while it is at rest, and immediately after it is completed. Pins that All is the always-available management surface.
-- [ ] 11.2 Test first: the Completed tab lists no recurring task, however many times it has been completed. Pins the (β) decision.
-- [ ] 11.3 Test first: completing a recurring task from the All tab leaves it in All, strikes it through in Today, and adds nothing to Completed. Pins the three-tab consequence in one test.
-- [ ] 11.4 Test first: Today shows its empty state when the only tasks are at-rest recurring ones, while All lists them and does not show its empty state. Pins the divergent empty states.
-- [ ] 11.5 Test first: the Completed tab shows its empty state when only recurring completions have happened. Pins the last empty state.
+- [x] 11.1 Test first in `src/ui/TaskViews.test.tsx`: the All tab lists a recurring task while it is due, while it is at rest, and immediately after it is completed. Pins that All is the always-available management surface.
+- [x] 11.2 Test first: the Completed tab lists no recurring task, however many times it has been completed. Pins the (β) decision.
+- [x] 11.3 Test first: completing a recurring task from the All tab leaves it in All, strikes it through in Today, and adds nothing to Completed. Pins the three-tab consequence in one test.
+- [x] 11.4 Test first: Today shows its empty state when the only tasks are at-rest recurring ones, while All lists them and does not show its empty state. Pins the divergent empty states.
+- [x] 11.5 Test first: the Completed tab shows its empty state when only recurring completions have happened. Pins the last empty state.
 
 ## 12. Reordering boundary
 
