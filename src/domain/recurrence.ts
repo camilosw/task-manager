@@ -4,6 +4,8 @@
  * directly against `date.getDay()`, so there is no conversion layer to get
  * backwards.
  */
+import type { Task } from './task'
+
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
 /**
@@ -317,4 +319,50 @@ export function formatRule(
     return `Every ${days}`
   }
   return `${nthShortName(rule.nth)} ${WEEKDAY_SHORT_NAMES[rule.weekday]}`
+}
+
+/**
+ * Clears `completedAt` on every recurring task that `isDue` again, leaving
+ * `lastCompletedOn` — and every one-off task — untouched (see
+ * specs/recurring-tasks/spec.md, "Completing a recurring task puts it to
+ * rest, it does not end it", and design.md, decision 8).
+ *
+ * `completedAt` keeps meaning "completed and not yet cleared by a
+ * recomputation" (see decision 3); this is the one place that clears it for
+ * a reason other than the completion itself. `lastCompletedOn` is untouched
+ * — it is the durable memory `isDue` reads, and must survive the reset for
+ * `isDue` to still answer correctly afterwards.
+ *
+ * Pure and, in the common case, a no-op: it returns the very same array
+ * reference when no task needed to change, so recomputation (design.md,
+ * decision 8's pipeline) can skip persisting the task list when nothing was
+ * reawakened. A task is left alone — without even evaluating `isDue` — when
+ * it is one-off, or when it is recurring but already shows as pending
+ * (`completedAt === null`), since there is nothing to clear either way.
+ */
+export function reawaken(tasks: Task[], now: Date): Task[] {
+  const today = formatLocalDate(now)
+  let changed = false
+
+  const result = tasks.map((task) => {
+    if (task.recurrence === null || task.completedAt === null) {
+      return task
+    }
+
+    const due = isDue(
+      task.recurrence,
+      formatLocalDate(task.createdAt),
+      task.lastCompletedOn,
+      today,
+    )
+
+    if (!due) {
+      return task
+    }
+
+    changed = true
+    return { ...task, completedAt: null }
+  })
+
+  return changed ? result : tasks
 }

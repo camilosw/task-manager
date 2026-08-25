@@ -30,8 +30,8 @@
 
 ## 4. Reawakening
 
-- [ ] 4.1 Test first in `src/domain/recurrence.test.ts`: `reawaken` clears `completedAt` on a recurring task that is due again while leaving its last completion date intact. Pins the reset.
-- [ ] 4.2 Test first: `reawaken` leaves at-rest recurring tasks and every one-off task untouched, and returns the same array reference when nothing changed. Pins the no-write common case.
+- [x] 4.1 Test first in `src/domain/recurrence.test.ts`: `reawaken` clears `completedAt` on a recurring task that is due again while leaving its last completion date intact. Pins the reset.
+- [x] 4.2 Test first: `reawaken` leaves at-rest recurring tasks and every one-off task untouched, and returns the same array reference when nothing changed. Pins the no-write common case.
 
 ## 5. Daily plan selection
 

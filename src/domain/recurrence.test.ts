@@ -5,12 +5,28 @@ import {
   isDue,
   lastDueDate,
   occursOn,
+  reawaken,
   type RecurrenceRule,
   type RecurrenceRuleDraft,
   type Weekday,
 } from './recurrence'
+import type { Task } from './task'
 
 const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6]
+
+function makeTask(overrides: Partial<Task> & { id: string }): Task {
+  return {
+    name: overrides.id,
+    duration: 30,
+    priority: 'medium',
+    recurrence: null,
+    createdAt: new Date(2026, 7, 1),
+    place: 0,
+    completedAt: null,
+    lastCompletedOn: null,
+    ...overrides,
+  }
+}
 
 describe('occursOn', () => {
   it('is true for a weekly rule on its named weekday, and false on the other six', () => {
@@ -258,5 +274,73 @@ describe('isDue', () => {
 
     expect(isDue(rule, createdOn, lastCompletedOn, '2026-08-30')).toBe(false)
     expect(isDue(rule, createdOn, lastCompletedOn, '2026-08-31')).toBe(true) // next Mon
+  })
+})
+
+describe('reawaken', () => {
+  // 4.1: reawaken clears completedAt on a recurring task that is due again,
+  // while leaving lastCompletedOn — the durable memory isDue reads — intact
+  // (see design.md, decision 8, and decision 3's two-field model).
+  it('clears completedAt on a recurring task that is due again, leaving lastCompletedOn intact', () => {
+    const rule: RecurrenceRule = { kind: 'weekly', weekdays: [1] } // Monday
+    const task = makeTask({
+      id: 'r1',
+      priority: null,
+      recurrence: rule,
+      createdAt: new Date(2026, 7, 10), // Mon 10 Aug 2026
+      completedAt: new Date(2026, 7, 17, 9, 0, 0), // completed Mon 17 Aug
+      lastCompletedOn: '2026-08-17',
+    })
+    const now = new Date(2026, 7, 24, 8, 0, 0) // Mon 24 Aug — due again
+
+    const [result] = reawaken([task], now)
+
+    expect(result.completedAt).toBeNull()
+    expect(result.lastCompletedOn).toBe('2026-08-17')
+  })
+
+  // 4.2: reawaken is a no-op — same array reference — for every task that
+  // does not need to change: an at-rest recurring task (its completion
+  // already clears its most recent occurrence) and every one-off task,
+  // completed or not (see design.md, decision 8, "the common case adds no
+  // write").
+  it('leaves at-rest recurring tasks and every one-off task untouched, returning the same array reference', () => {
+    const rule: RecurrenceRule = { kind: 'weekly', weekdays: [1] } // Monday
+    const atRestRecurring = makeTask({
+      id: 'r1',
+      priority: null,
+      recurrence: rule,
+      createdAt: new Date(2026, 7, 10), // Mon 10 Aug 2026
+      completedAt: new Date(2026, 7, 24, 9, 0, 0), // completed Mon 24 Aug
+      lastCompletedOn: '2026-08-24',
+    })
+    const pendingOneOff = makeTask({
+      id: 'o1',
+      priority: 'high',
+      recurrence: null,
+      createdAt: new Date(2026, 7, 1),
+      completedAt: null,
+      lastCompletedOn: null,
+    })
+    const completedOneOff = makeTask({
+      id: 'o2',
+      priority: 'low',
+      recurrence: null,
+      createdAt: new Date(2026, 7, 1),
+      completedAt: new Date(2026, 7, 20, 9, 0, 0),
+      lastCompletedOn: null,
+    })
+    const tasks = [atRestRecurring, pendingOneOff, completedOneOff]
+    // Tue 25 Aug: the most recent Monday occurrence (24 Aug) is already
+    // cleared by atRestRecurring's own last completion (24 Aug), so it is
+    // at rest, not due.
+    const now = new Date(2026, 7, 25, 8, 0, 0)
+
+    const result = reawaken(tasks, now)
+
+    expect(result).toBe(tasks)
+    expect(result[0]).toBe(atRestRecurring)
+    expect(result[1]).toBe(pendingOneOff)
+    expect(result[2]).toBe(completedOneOff)
   })
 })
