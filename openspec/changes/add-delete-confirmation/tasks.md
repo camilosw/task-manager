@@ -43,4 +43,35 @@
 
 ## 3. Verify recurring-task deletion is unaffected in effect
 
-- [ ] 3.1 Confirm that the existing coverage for "deleting a recurring task ends it for good" (`specs/task-management/spec.md`) still holds once deletion is confirmed — `TaskItem` calls `onDelete(task.id)` identically regardless of task type, so no recurrence-specific test changes are expected; note in the task if one turns out to be needed.
+- [x] 3.1 Confirm that the existing coverage for "deleting a recurring task ends it for good" (`specs/task-management/spec.md`) still holds once deletion is confirmed — `TaskItem` calls `onDelete(task.id)` identically regardless of task type, so no recurrence-specific test changes are expected; note in the task if one turns out to be needed.
+
+  **Verified, no test change needed.** There is no dedicated end-to-end
+  test anywhere in the suite (`TaskItem.test.tsx`, `TaskManagerApp.test.tsx`,
+  `TaskViews.test.tsx`, `AppStateProvider.test.tsx`, `Rollover.test.tsx`)
+  that clicks Delete/confirm on a *recurring* task's row and asserts it is
+  gone for good — the scenario has only ever been covered structurally, by
+  the deletion code path being type-agnostic, not by a recurrence-specific
+  test:
+  - `TaskItem.tsx`'s `handleConfirmDelete` (the dialog's confirm handler,
+    added in section 2) calls `onDelete(task.id)` unconditionally, with no
+    branch or check on `task.recurrence` anywhere in the confirm/cancel/
+    escape/backdrop paths.
+  - `AppStateProvider.tsx`'s `deleteTask` removes the task from `tasks` by
+    id (`loaded.tasks.filter((task) => task.id !== id)`) and prunes it from
+    the snapshot, also with no type-based branching. This is exercised
+    generically by the existing "deletes a task by removing it from tasks
+    and pruning it from the snapshot, persisting both" test in
+    `AppStateProvider.test.tsx`.
+  - Because deletion removes the task from `tasks` entirely, "does not
+    return at its next occurrence" follows structurally: a task that no
+    longer exists cannot be found due by `isDue`/rollover/daily-plan
+    recomputation, which all operate over the `tasks` array. There is no
+    separate recurrence-driven "reappearance" code path a test could
+    exercise here.
+
+  Since sections 1 and 2's tests already exercise the shared confirm/
+  cancel/Escape code path (with a one-off task, per `TaskItem.test.tsx`'s
+  `makeTask` default of `recurrence: null`), and that path is proven
+  type-agnostic by inspection, no new or updated test is required. Full
+  suite passes 321/321, run twice (non-flaky); `npm run typecheck` and
+  `npm run lint` both clean.
