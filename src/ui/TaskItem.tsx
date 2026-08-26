@@ -1,4 +1,13 @@
-import { useId, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { formatDuration } from '../domain/duration'
 import type { Priority } from '../domain/priority'
 import { formatRule } from '../domain/recurrence'
@@ -62,6 +71,23 @@ export type TaskItemProps = {
  * from the Today tab remain visible there, struck through, until the plan
  * is next recomputed (see specs/task-views/spec.md, "Completing a task from
  * the Today tab keeps it visible").
+ *
+ * Deleting is gated behind a confirmation step: activating "Delete" sets
+ * `isConfirmingDelete` rather than calling `onDelete` directly, mirroring
+ * how `isEditing` already gates the edit form (design.md, decision 2). The
+ * confirmation itself reuses `CreateTaskSheet`'s native-`<dialog>` pattern
+ * (design.md, decision 1) - `showModal`/`close` driven from a ref and an
+ * effect, Escape handled via an explicit `onKeyDown` rather than the native
+ * `cancel` event, and a backdrop click detected via `event.target ===
+ * deleteDialogRef.current` - for the same reason: this project's jsdom
+ * shim (vitest.setup.ts) only toggles the `open` property, so the
+ * behaviors the spec pins down (focus into the dialog on open, focus back
+ * to "Delete" on close) are handled explicitly here rather than left to
+ * the platform. The dialog's confirm control is named "Delete task" rather
+ * than "Delete" because the row's own "Delete" trigger stays mounted while
+ * the dialog is open (tasks.md, section 1 note). Focus lands on "Cancel"
+ * when the dialog opens, favoring the non-destructive default the same way
+ * a native confirm prompt would.
  */
 export function TaskItem({
   task,
@@ -73,7 +99,52 @@ export function TaskItem({
   rootStyle,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const nameId = useId()
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
+  const deleteDialogRef = useRef<HTMLDialogElement>(null)
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isConfirmingDelete) {
+      deleteDialogRef.current?.showModal()
+      cancelDeleteRef.current?.focus()
+    }
+  }, [isConfirmingDelete])
+
+  function openDeleteConfirmation() {
+    setIsConfirmingDelete(true)
+  }
+
+  function closeDeleteConfirmation() {
+    deleteDialogRef.current?.close()
+    setIsConfirmingDelete(false)
+    deleteButtonRef.current?.focus()
+  }
+
+  function handleConfirmDelete() {
+    onDelete(task.id)
+    closeDeleteConfirmation()
+  }
+
+  function handleDeleteDialogKeyDown(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeDeleteConfirmation()
+    }
+  }
+
+  function handleDeleteDialogBackdropClick(
+    event: MouseEvent<HTMLDialogElement>,
+  ) {
+    // Same technique as CreateTaskSheet's own backdrop click: only a click
+    // landing on the dialog element's own box - never reaching the message
+    // or either button inside it - reports the dialog itself as the
+    // target.
+    if (event.target === deleteDialogRef.current) {
+      closeDeleteConfirmation()
+    }
+  }
 
   async function handleEditSubmit(values: TaskFormValues) {
     if (values.duration === undefined) {
@@ -126,62 +197,98 @@ export function TaskItem({
   const isCompleted = task.completedAt !== null
 
   return (
-    <li
-      className="task-row"
-      ref={rootRef}
-      style={rootStyle}
-      data-task-id={task.id}
-    >
-      {dragHandle}
-      <input
-        type="checkbox"
-        className="task-row__checkbox"
-        aria-labelledby={nameId}
-        checked={isCompleted}
-        disabled={isCompleted}
-        onChange={() => onComplete(task.id)}
-      />
-      <div className="task-row__main">
-        <span id={nameId} className="task-row__name">
-          {isCompleted ? <s>{task.name}</s> : task.name}
-        </span>
-        <div className="task-row__meta">
-          <span className="task-row__duration">
-            {formatDuration(task.duration)}
+    <>
+      <li
+        className="task-row"
+        ref={rootRef}
+        style={rootStyle}
+        data-task-id={task.id}
+      >
+        {dragHandle}
+        <input
+          type="checkbox"
+          className="task-row__checkbox"
+          aria-labelledby={nameId}
+          checked={isCompleted}
+          disabled={isCompleted}
+          onChange={() => onComplete(task.id)}
+        />
+        <div className="task-row__main">
+          <span id={nameId} className="task-row__name">
+            {isCompleted ? <s>{task.name}</s> : task.name}
           </span>
-          {task.recurrence !== null ? (
-            // A recurring task shows its rule in the same slot a one-off
-            // task shows its priority, and no priority name at all — it has
-            // none (see specs/task-views/spec.md, "Every task display shows
-            // name, duration, and priority", and design.md, decision 11).
-            <span className="task-row__recurrence" data-recurring="true">
-              {formatRule(task.recurrence, 'short')}
+          <div className="task-row__meta">
+            <span className="task-row__duration">
+              {formatDuration(task.duration)}
             </span>
-          ) : (
-            <span className="task-row__priority" data-priority={task.priority}>
-              {PRIORITY_LABELS[task.priority as Priority]}
-            </span>
-          )}
+            {task.recurrence !== null ? (
+              // A recurring task shows its rule in the same slot a one-off
+              // task shows its priority, and no priority name at all — it
+              // has none (see specs/task-views/spec.md, "Every task display
+              // shows name, duration, and priority", and design.md,
+              // decision 11).
+              <span className="task-row__recurrence" data-recurring="true">
+                {formatRule(task.recurrence, 'short')}
+              </span>
+            ) : (
+              <span
+                className="task-row__priority"
+                data-priority={task.priority}
+              >
+                {PRIORITY_LABELS[task.priority as Priority]}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="task-row__actions">
-        <button
-          type="button"
-          className="task-row__icon-button task-row__edit"
-          aria-label="Edit"
-          onClick={() => setIsEditing(true)}
+        <div className="task-row__actions">
+          <button
+            type="button"
+            className="task-row__icon-button task-row__edit"
+            aria-label="Edit"
+            onClick={() => setIsEditing(true)}
+          >
+            <EditIcon />
+          </button>
+          <button
+            type="button"
+            className="task-row__icon-button task-row__delete"
+            aria-label="Delete"
+            ref={deleteButtonRef}
+            onClick={openDeleteConfirmation}
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      </li>
+      {isConfirmingDelete && (
+        <dialog
+          ref={deleteDialogRef}
+          className="delete-confirm-dialog"
+          onKeyDown={handleDeleteDialogKeyDown}
+          onClick={handleDeleteDialogBackdropClick}
         >
-          <EditIcon />
-        </button>
-        <button
-          type="button"
-          className="task-row__icon-button task-row__delete"
-          aria-label="Delete"
-          onClick={() => onDelete(task.id)}
-        >
-          <TrashIcon />
-        </button>
-      </div>
-    </li>
+          <p className="delete-confirm-dialog__message">
+            Delete &quot;{task.name}&quot;? This can&apos;t be undone.
+          </p>
+          <div className="delete-confirm-dialog__actions">
+            <button
+              type="button"
+              className="delete-confirm-dialog__cancel"
+              ref={cancelDeleteRef}
+              onClick={closeDeleteConfirmation}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="delete-confirm-dialog__confirm"
+              onClick={handleConfirmDelete}
+            >
+              Delete task
+            </button>
+          </div>
+        </dialog>
+      )}
+    </>
   )
 }
