@@ -158,3 +158,79 @@
   border-color: var(--danger);
   background: color-mix(in oklch, var(--danger) 12%, transparent);
 }
+
+/* The delete-confirmation dialog (specs/task-management/spec.md, "Editing
+   and deleting are named controls on every task row"). Follows the same
+   native-<dialog> conventions as .create-task-sheet in CreateTaskSheet.css:
+   unstyled/hidden until `[open]` is set by `showModal()`, and a small
+   `[open]`-keyed entrance animation rather than a `transition`. */
+.delete-confirm-dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  background: var(--surface);
+  color: var(--text);
+  max-width: min(320px, calc(100% - 32px));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.25);
+}
+
+@keyframes delete-confirm-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.delete-confirm-dialog[open] {
+  animation: delete-confirm-dialog-in 0.15s ease;
+}
+
+.delete-confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.delete-confirm-dialog__message {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.delete-confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-confirm-dialog__cancel,
+.delete-confirm-dialog__confirm {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.delete-confirm-dialog__cancel:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.delete-confirm-dialog__confirm {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--accent-text);
+}
+
+.delete-confirm-dialog__confirm:hover {
+  filter: brightness(1.05);
+}

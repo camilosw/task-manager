@@ -280,7 +280,12 @@ describe('deleting a task (8.4)', () => {
 
     expect(screen.getByText('Keep me')).toBeTruthy()
     expect(screen.queryByText('Task deleted')).toBeNull()
-    expect(getFeedbackRegion().textContent).toBe('')
+    // Cancelling must not produce a *new* "Task deleted" feedback message.
+    // This does not assert the region is empty: the earlier
+    // `createTaskViaForm` call above leaves a real "Task added" message
+    // that only self-clears after FEEDBACK_DURATION_MS (see
+    // useActionFeedback.ts), and this test does not wait that out.
+    expect(getFeedbackRegion().textContent).not.toBe('Task deleted')
   })
 })
 
