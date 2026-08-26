@@ -174,15 +174,56 @@ describe('edit and delete controls on a task row (6.4)', () => {
     expect(deleteButton.hasAttribute('disabled')).toBe(false)
   })
 
-  it('deletes the task immediately, with no confirmation step', () => {
+  it('presents a confirmation dialog naming the task, without deleting it yet', () => {
     const task = makeTask({ id: 't1', name: 'Water the plants' })
     const { onDelete } = renderItem(task)
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText(/Water the plants/)).toBeTruthy()
+    expect(onDelete).not.toHaveBeenCalled()
+  })
+
+  // The dialog's confirm control is named "Delete task" rather than
+  // "Delete" (the row's own trigger) because both are mounted at once while
+  // the dialog is open - the same reason CreateTaskSheet's trigger ("Add a
+  // task") and its form's submit control ("Add task") use two distinct, but
+  // related, names rather than one name disambiguated only by DOM position
+  // (see CreateTaskSheet.tsx).
+  it("activating the dialog's confirm control calls onDelete and closes the dialog", () => {
+    const task = makeTask({ id: 't1', name: 'Water the plants' })
+    const { onDelete } = renderItem(task)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete task' }))
+
     expect(onDelete).toHaveBeenCalledWith('t1')
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  it("activating the dialog's cancel control leaves onDelete uncalled, closes the dialog, and leaves the row unchanged", () => {
+    const task = makeTask({ id: 't1', name: 'Water the plants' })
+    const { onDelete } = renderItem(task)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Water the plants')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+  })
+
+  it('pressing Escape while the dialog is open behaves like cancel', () => {
+    const task = makeTask({ id: 't1', name: 'Water the plants' })
+    const { onDelete } = renderItem(task)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('replaces the row with a form pre-filled from the task, and cancelling restores it unchanged', () => {

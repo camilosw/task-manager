@@ -251,6 +251,12 @@ describe('deleting a task (8.4)', () => {
     const itemA = (await screen.findByText('Task A')).closest('li')
     if (!itemA) throw new Error('expected a list item')
     fireEvent.click(within(itemA).getByRole('button', { name: 'Delete' }))
+    // Deleting is gated behind a confirmation dialog (see
+    // openspec/changes/add-delete-confirmation) - the "Delete" click above
+    // only opens it. "Delete task" is the dialog's confirm control, named
+    // distinctly from the row's own "Delete" trigger since both are mounted
+    // at once (see TaskItem.test.tsx for the naming rationale).
+    fireEvent.click(screen.getByRole('button', { name: 'Delete task' }))
 
     await waitFor(() => {
       expect(screen.queryByText('Task A')).toBeNull()
@@ -259,6 +265,22 @@ describe('deleting a task (8.4)', () => {
     // exactly one item remains.
     expect(screen.getByText('Task B')).toBeTruthy()
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('cancelling the confirmation leaves the task visible and shows no "Task deleted" feedback', async () => {
+    renderApp()
+    await waitForLoaded()
+    switchTab('All')
+    createTaskViaForm('Keep me', '15m', 'Medium')
+
+    const item = (await screen.findByText('Keep me')).closest('li')
+    if (!item) throw new Error('expected a list item')
+    fireEvent.click(within(item).getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('Keep me')).toBeTruthy()
+    expect(screen.queryByText('Task deleted')).toBeNull()
+    expect(getFeedbackRegion().textContent).toBe('')
   })
 })
 
@@ -396,6 +418,7 @@ describe('action feedback follows every completed action (4.3)', () => {
     const item = (await screen.findByText('Throw away')).closest('li')
     if (!item) throw new Error('expected a list item')
     fireEvent.click(within(item).getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete task' }))
 
     expect(await screen.findByText('Task deleted')).toBeTruthy()
   })

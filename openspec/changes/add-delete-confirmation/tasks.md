@@ -1,13 +1,24 @@
 ## 1. Update existing tests for confirmation-gated deletion (red)
 
-- [ ] 1.1 In `src/ui/TaskItem.test.tsx`, replace the `'deletes the task immediately, with no confirmation step'` test (in the `'edit and delete controls on a task row'` describe block) with a test asserting that clicking the "Delete" control presents a dialog naming the task and does **not** call `onDelete` yet.
-- [ ] 1.2 In the same file, add a test asserting that activating the dialog's confirm control calls `onDelete('t1')` and closes the dialog.
-- [ ] 1.3 In the same file, add a test asserting that activating the dialog's cancel control leaves `onDelete` uncalled, closes the dialog, and leaves the row unchanged.
-- [ ] 1.4 In the same file, add a test asserting that pressing Escape while the dialog is open behaves like cancel (`onDelete` uncalled, dialog closes).
-- [ ] 1.5 In `src/ui/TaskManagerApp.test.tsx`, update `'removes the task from the list and pulls no replacement into view'` (describe `'deleting a task (8.4)'`) to activate the dialog's confirm control after clicking "Delete", before asserting the task is gone.
-- [ ] 1.6 In the same file, update `'shows "Task deleted" after deleting a task'` the same way: confirm after clicking "Delete", before asserting the feedback message.
-- [ ] 1.7 In the same file, add a test asserting that cancelling the confirmation leaves the task visible in the list and shows no "Task deleted" feedback.
-- [ ] 1.8 Run the full test suite and confirm every test touched or added in this section fails for the expected reason (no confirmation step exists yet), not from a typo or missing import.
+- [x] 1.1 In `src/ui/TaskItem.test.tsx`, replace the `'deletes the task immediately, with no confirmation step'` test (in the `'edit and delete controls on a task row'` describe block) with a test asserting that clicking the "Delete" control presents a dialog naming the task and does **not** call `onDelete` yet.
+- [x] 1.2 In the same file, add a test asserting that activating the dialog's confirm control calls `onDelete('t1')` and closes the dialog.
+- [x] 1.3 In the same file, add a test asserting that activating the dialog's cancel control leaves `onDelete` uncalled, closes the dialog, and leaves the row unchanged.
+- [x] 1.4 In the same file, add a test asserting that pressing Escape while the dialog is open behaves like cancel (`onDelete` uncalled, dialog closes).
+- [x] 1.5 In `src/ui/TaskManagerApp.test.tsx`, update `'removes the task from the list and pulls no replacement into view'` (describe `'deleting a task (8.4)'`) to activate the dialog's confirm control after clicking "Delete", before asserting the task is gone.
+- [x] 1.6 In the same file, update `'shows "Task deleted" after deleting a task'` the same way: confirm after clicking "Delete", before asserting the feedback message.
+- [x] 1.7 In the same file, add a test asserting that cancelling the confirmation leaves the task visible in the list and shows no "Task deleted" feedback.
+- [x] 1.8 Run the full test suite and confirm every test touched or added in this section fails for the expected reason (no confirmation step exists yet), not from a typo or missing import.
+
+  Note on a routine naming call made while writing these tests: the dialog's
+  confirm control is asserted by accessible name "Delete task" and its
+  cancel control by "Cancel". "Delete task" (rather than reusing "Delete")
+  was chosen because the row's own "Delete" trigger stays mounted alongside
+  the open dialog (design.md, decision 2), mirroring how CreateTaskSheet's
+  trigger ("Add a task") and its form's submit control ("Add task") already
+  use two distinct, related names in this codebase for the same "trigger +
+  resulting overlay's primary action" shape, rather than one name
+  disambiguated only by DOM position. Section 2's implementation should use
+  these two names for the dialog's controls so tests 1.1-1.4 pass unchanged.
 
 ## 2. Implement the confirmation dialog in `TaskItem`
 
